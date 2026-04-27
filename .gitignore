@@ -50,3 +50,5 @@ packages/contracts/deployments/anvil/
 
 # Misc
 .turbo
+
+.vercel
