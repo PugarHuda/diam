@@ -3,11 +3,11 @@ node_modules/
 .pnpm-store/
 .pnpm-debug.log*
 
-# Foundry
-out/
-cache/
-broadcast/
-**/lib/
+# Foundry (scoped to contracts package only — `lib/` elsewhere is normal app code)
+packages/contracts/out/
+packages/contracts/cache/
+packages/contracts/broadcast/
+packages/contracts/lib/
 
 # Next.js
 .next/
