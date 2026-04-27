@@ -2,15 +2,26 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import type { Route } from "next";
 import { parseUnits } from "viem";
 import { useAccount } from "wagmi";
-import { Header } from "@/components/Header";
+import { AppShell } from "@/components/AppShell";
 import { useFaucet } from "@/lib/hooks/useFaucet";
 import { CUSDC_ADDRESS, CETH_ADDRESS } from "@/lib/wagmi";
 
 const TOKENS = [
-  { symbol: "cUSDC", address: CUSDC_ADDRESS, decimals: 6, defaultMint: "10000" },
-  { symbol: "cETH", address: CETH_ADDRESS, decimals: 18, defaultMint: "10" },
+  {
+    symbol: "cUSDC",
+    address: CUSDC_ADDRESS,
+    decimals: 6,
+    defaultMint: "10000",
+  },
+  {
+    symbol: "cETH",
+    address: CETH_ADDRESS,
+    decimals: 18,
+    defaultMint: "10",
+  },
 ];
 
 export default function FaucetPage() {
@@ -28,131 +39,174 @@ export default function FaucetPage() {
   const busy = step === "encrypting" || step === "signing" || step === "confirming";
 
   return (
-    <>
-      <Header />
-      <main className="mx-auto max-w-2xl px-6 py-12">
-        <h1 className="text-3xl font-bold">Faucet</h1>
-        <p className="mt-2 text-sm text-[--color-muted]">
-          Mint mock confidential tokens to your wallet. Encrypted via Nox.
-          Testnet only — no real value.
+    <AppShell>
+      <header className="mb-8">
+        <h1 className="text-headline-xl text-3xl font-bold tracking-tight text-white">
+          FAUCET
+        </h1>
+        <p className="mt-1 font-mono text-xs text-zinc-500">
+          MOCK_ERC7984_DISPENSER | TESTNET_ONLY
         </p>
+      </header>
 
-        {!isConnected && (
-          <div className="mt-8 rounded-xl border border-[--color-border] bg-[--color-surface] p-8 text-center">
-            <p className="text-[--color-muted]">Connect wallet to mint.</p>
-          </div>
-        )}
+      {!isConnected && (
+        <div className="glass-card p-12 text-center">
+          <p className="font-mono text-zinc-500">⟨ CONNECT WALLET TO MINT ⟩</p>
+        </div>
+      )}
 
-        {isConnected && (
-          <form
-            onSubmit={onMint}
-            className="mt-8 space-y-6 rounded-xl border border-[--color-border] bg-[--color-surface] p-6"
-          >
-            <div>
-              <label className="block text-sm font-medium">Token</label>
-              <div className="mt-2 grid grid-cols-2 gap-2">
-                {TOKENS.map((t) => (
-                  <button
-                    key={t.symbol}
-                    type="button"
-                    onClick={() => {
-                      setSelected(t);
-                      setAmount(t.defaultMint);
-                    }}
-                    className={`rounded-md border px-4 py-3 text-left transition ${
-                      selected.symbol === t.symbol
-                        ? "border-[--color-accent] bg-[--color-accent]/10"
-                        : "border-[--color-border] hover:border-[--color-accent]"
-                    }`}
-                  >
-                    <p className="font-medium">{t.symbol}</p>
-                    <p className="mt-1 font-mono text-xs text-[--color-muted]">
-                      {t.address.slice(0, 8)}…{t.address.slice(-6)}
-                    </p>
-                  </button>
-                ))}
-              </div>
+      {isConnected && (
+        <div className="grid grid-cols-12 gap-6">
+          <section className="col-span-12 lg:col-span-7">
+            <div className="glass-card p-6">
+              <h3 className="text-label-caps mb-6 flex items-center gap-2 text-zinc-400">
+                <span className="h-1.5 w-1.5 bg-[--color-primary]" />
+                Mint Confidential Tokens
+              </h3>
+
+              <form onSubmit={onMint} className="space-y-6">
+                <div>
+                  <label className="text-label-caps mb-2 block text-zinc-500">
+                    Token
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {TOKENS.map((t) => (
+                      <button
+                        key={t.symbol}
+                        type="button"
+                        onClick={() => {
+                          setSelected(t);
+                          setAmount(t.defaultMint);
+                        }}
+                        className={`border p-4 text-left transition-all ${
+                          selected.symbol === t.symbol
+                            ? "border-[--color-primary] bg-[--color-primary]/10"
+                            : "border-zinc-800 hover:border-[--color-primary]/40"
+                        }`}
+                      >
+                        <p className="font-display text-sm font-bold">
+                          {t.symbol}
+                        </p>
+                        <p className="mt-1 font-mono text-[10px] text-zinc-600">
+                          {t.address.slice(0, 10)}…{t.address.slice(-8)}
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-label-caps text-zinc-500">
+                      Amount
+                    </label>
+                    <span className="font-mono text-[9px] uppercase text-[--color-primary]">
+                      ENCRYPTED ON SUBMIT
+                    </span>
+                  </div>
+                  <div className="flex border border-zinc-800 bg-zinc-950 focus-within:border-[--color-primary]">
+                    <input
+                      type="number"
+                      step="any"
+                      min="0"
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
+                      placeholder="0.00"
+                      className="flex-1 bg-transparent px-3 py-2 font-mono text-sm focus:outline-none"
+                      data-numeric
+                    />
+                    <span className="grid place-items-center px-3 text-label-caps text-zinc-500">
+                      {selected.symbol}
+                    </span>
+                  </div>
+                </div>
+
+                {error && (
+                  <div className="border border-[--color-danger] bg-[--color-danger]/10 p-3 text-sm text-[--color-danger]">
+                    {error}
+                  </div>
+                )}
+
+                {step === "done" && (
+                  <div className="border border-[--color-primary] bg-[--color-primary]/10 p-3 text-sm">
+                    <span className="text-[--color-primary]">
+                      MINTED {amount} {selected.symbol}.
+                    </span>{" "}
+                    <a
+                      href={`https://sepolia.arbiscan.io/tx/${txHash}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="underline"
+                    >
+                      Tx
+                    </a>{" "}
+                    ·{" "}
+                    <Link
+                      href={"/portfolio" as Route}
+                      className="underline"
+                    >
+                      Decrypt balance →
+                    </Link>
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={busy}
+                  className="diam-btn-primary w-full py-4 text-sm"
+                >
+                  {step === "encrypting" && "ENCRYPTING VIA NOX…"}
+                  {step === "signing" && "CONFIRM IN WALLET…"}
+                  {step === "confirming" && "MINTING ON-CHAIN…"}
+                  {(step === "idle" || step === "error") &&
+                    `MINT ${amount} ${selected.symbol}`}
+                  {step === "done" && "MINTED ✓"}
+                </button>
+              </form>
+            </div>
+          </section>
+
+          <aside className="col-span-12 space-y-4 lg:col-span-5">
+            <div className="glass-card border-l-2 border-l-[--color-primary] p-4">
+              <p className="text-label-caps mb-2 text-zinc-500">NEXT_STEPS</p>
+              <ol className="space-y-2 font-mono text-xs">
+                <Step
+                  num="01"
+                  text="Mint balance for both tokens you want to trade"
+                />
+                <Step
+                  num="02"
+                  text="Approve Diam contract as operator on each cToken (one-time)"
+                />
+                <Step
+                  num="03"
+                  text="Open an intent or RFQ from /create"
+                />
+              </ol>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium">Amount</label>
-              <div className="mt-1 flex rounded-md border border-[--color-border] bg-[--color-bg] focus-within:border-[--color-accent]">
-                <input
-                  type="number"
-                  step="any"
-                  min="0"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  placeholder="0.0"
-                  className="flex-1 bg-transparent px-3 py-2 font-mono focus:outline-none"
-                  data-numeric
-                />
-                <span className="grid place-items-center px-3 text-sm text-[--color-muted]">
-                  {selected.symbol}
-                </span>
-              </div>
-              <p className="mt-1 text-xs text-[--color-muted]">
-                Encrypted on-chain. Other addresses only see &quot;some balance
-                changed&quot; — never the amount.
+            <div className="glass-card p-4">
+              <p className="text-label-caps mb-2 text-zinc-500">
+                MOCK_ERC7984_NOTE
+              </p>
+              <p className="font-mono text-[11px] leading-relaxed text-zinc-400">
+                MockCToken is a real ERC-7984 implementation (~150 LOC) using
+                Nox.transfer + Nox.mint primitives directly. Open faucet for
+                testnet only — production tokens would use access control.
               </p>
             </div>
-
-            {error && (
-              <div className="rounded-md border border-[--color-danger] bg-[--color-danger]/10 p-3 text-sm text-[--color-danger]">
-                {error}
-              </div>
-            )}
-
-            {step === "done" && (
-              <div className="rounded-md border border-[--color-success] bg-[--color-success]/10 p-3 text-sm">
-                Minted {amount} {selected.symbol}.{" "}
-                <a
-                  href={`https://sepolia.arbiscan.io/tx/${txHash}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="underline"
-                >
-                  View tx
-                </a>
-                {" · "}
-                <Link href="/portfolio" className="underline">
-                  Decrypt balance →
-                </Link>
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={busy}
-              className="w-full rounded-md bg-[--color-accent] px-6 py-3 font-medium text-[--color-accent-fg] transition hover:bg-[--color-accent-hover] disabled:opacity-50"
-            >
-              {step === "encrypting" && "Encrypting amount via Nox…"}
-              {step === "signing" && "Confirm in wallet…"}
-              {step === "confirming" && "Minting on-chain…"}
-              {(step === "idle" || step === "error") &&
-                `Mint ${amount} ${selected.symbol}`}
-              {step === "done" && "Minted ✓"}
-            </button>
-          </form>
-        )}
-
-        <div className="mt-8 rounded-md border border-[--color-border] bg-[--color-surface]/50 p-4 text-sm text-[--color-muted]">
-          <p className="font-medium text-[--color-foreground]">Next steps</p>
-          <ol className="mt-2 list-decimal space-y-1 pl-5">
-            <li>Mint balance for both tokens you want to trade</li>
-            <li>
-              Approve Diam as operator on each cToken (one-time, in your
-              wallet)
-            </li>
-            <li>
-              Create an{" "}
-              <Link href="/create" className="text-[--color-accent] underline">
-                intent or RFQ
-              </Link>
-            </li>
-          </ol>
+          </aside>
         </div>
-      </main>
-    </>
+      )}
+    </AppShell>
+  );
+}
+
+function Step({ num, text }: { num: string; text: string }) {
+  return (
+    <li className="flex items-start gap-3">
+      <span className="font-mono text-[--color-primary]">{num}</span>
+      <span className="text-zinc-400">{text}</span>
+    </li>
   );
 }

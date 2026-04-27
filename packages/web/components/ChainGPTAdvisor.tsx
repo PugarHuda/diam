@@ -15,10 +15,6 @@ type Result =
     }
   | { kind: "error"; message: string };
 
-/**
- * Inline AI advisor. Calls ChainGPT to sanity-check a trade's fair price
- * before user submits. Server-side route handler keeps API key off client.
- */
 export function ChainGPTAdvisor({
   pair,
   unitPriceUsd,
@@ -51,33 +47,44 @@ export function ChainGPTAdvisor({
   }
 
   return (
-    <div className="rounded-xl border border-[--color-border] bg-[--color-surface] p-4">
+    <div className="border-l-2 border-l-[--color-primary] bg-zinc-900/30 p-4">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-medium">ChainGPT advisor</p>
-          <p className="text-xs text-[--color-muted]">
-            Sanity-check {pair} pricing against market
+          <p className="text-label-caps flex items-center gap-2 text-[--color-primary]">
+            <span
+              className="material-symbols-outlined text-base"
+              style={{ fontVariationSettings: "'FILL' 1" }}
+            >
+              psychology
+            </span>
+            ChainGPT Advisor
+          </p>
+          <p className="font-mono text-[11px] text-zinc-500">
+            sanity-check {pair} pricing
           </p>
         </div>
         <button
           onClick={check}
           disabled={result.kind === "loading"}
-          className="rounded-md border border-[--color-border] px-3 py-1.5 text-xs transition hover:border-[--color-accent] disabled:opacity-50"
+          className="text-label-caps border border-zinc-800 px-3 py-1.5 transition-all hover:border-[--color-primary] hover:text-[--color-primary] disabled:opacity-50"
         >
-          {result.kind === "loading" ? "Asking…" : "Check"}
+          {result.kind === "loading" ? "ASKING…" : "CHECK"}
         </button>
       </div>
 
       {result.kind === "ok" && (
-        <div className="mt-3 space-y-2 border-t border-[--color-border] pt-3 text-sm">
-          <div className="grid grid-cols-2 gap-2">
-            <Stat label="Fair price" value={`$${result.fairPriceUsd.toLocaleString()}`} />
+        <div className="mt-3 space-y-2 border-t border-zinc-800 pt-3 text-sm">
+          <div className="grid grid-cols-3 gap-2">
             <Stat
-              label="Your price"
+              label="Fair"
+              value={`$${result.fairPriceUsd.toLocaleString()}`}
+            />
+            <Stat
+              label="Yours"
               value={`$${result.yourPriceUsd.toLocaleString()}`}
             />
             <Stat
-              label="Delta"
+              label="Δ"
               value={`${(result.deltaBps / 100).toFixed(2)}%`}
               tone={
                 Math.abs(result.deltaBps) > 500
@@ -89,16 +96,20 @@ export function ChainGPTAdvisor({
             />
           </div>
           {result.warning && (
-            <p className="rounded border border-[--color-warning] bg-[--color-warning]/10 px-2 py-1 text-xs text-[--color-warning]">
+            <p className="border border-yellow-900 bg-yellow-950/40 px-2 py-1 font-mono text-[10px] text-yellow-400">
               ⚠ {result.warning}
             </p>
           )}
-          <p className="text-xs text-[--color-muted]">{result.rationale}</p>
+          <p className="font-mono text-[11px] leading-relaxed text-zinc-500">
+            {result.rationale}
+          </p>
         </div>
       )}
 
       {result.kind === "error" && (
-        <p className="mt-3 text-xs text-[--color-danger]">{result.message}</p>
+        <p className="mt-3 font-mono text-[11px] text-[--color-danger]">
+          {result.message}
+        </p>
       )}
     </div>
   );
@@ -114,15 +125,15 @@ function Stat({
   tone?: "ok" | "warning" | "muted";
 }) {
   const colorMap = {
-    ok: "text-[--color-success]",
-    warning: "text-[--color-warning]",
-    muted: "text-[--color-muted]",
+    ok: "text-[--color-primary]",
+    warning: "text-yellow-400",
+    muted: "text-zinc-400",
   } as const;
   return (
     <div>
-      <p className="text-xs text-[--color-muted]">{label}</p>
+      <p className="text-label-caps text-zinc-600">{label}</p>
       <p
-        className={`font-mono ${tone ? colorMap[tone] : ""}`}
+        className={`font-mono text-sm ${tone ? colorMap[tone] : ""}`}
         data-numeric
       >
         {value}

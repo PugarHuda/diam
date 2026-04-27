@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { Header } from "@/components/Header";
+import type { Route } from "next";
+import { AppShell } from "@/components/AppShell";
 import { useIntents, statusLabel, modeLabel } from "@/lib/hooks/useIntents";
 import { shortAddress } from "@/lib/utils";
 import { CUSDC_ADDRESS, CETH_ADDRESS } from "@/lib/wagmi";
@@ -15,88 +16,113 @@ export default function IntentsPage() {
   const { rows, isLoading, error } = useIntents(20);
 
   return (
-    <>
-      <Header />
-      <main className="mx-auto max-w-5xl px-6 py-12">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Open intents</h1>
-            <p className="mt-1 text-sm text-[--color-muted]">
-              Asset pairs visible. Amounts encrypted on-chain — only authorized
-              parties can decrypt.
-            </p>
-          </div>
+    <AppShell>
+      <header className="mb-8 flex items-end justify-between">
+        <div>
+          <h1 className="text-headline-xl text-3xl font-bold tracking-tight text-white">
+            ACTIVE INTENTS
+          </h1>
+          <p className="mt-1 font-mono text-xs text-zinc-500">
+            ASSET_PAIRS_VISIBLE | AMOUNTS_ENCRYPTED
+          </p>
+        </div>
+        <Link href={"/create" as Route}>
+          <button className="diam-btn-primary px-5 py-2 text-xs">
+            + New Intent
+          </button>
+        </Link>
+      </header>
+
+      {isLoading && (
+        <p className="py-12 text-center font-mono text-sm text-zinc-500">
+          ⟨ FETCHING ON-CHAIN INTENTS ⟩
+        </p>
+      )}
+
+      {error && (
+        <div className="border border-[--color-danger] bg-[--color-danger]/10 p-3 font-mono text-sm text-[--color-danger]">
+          {error.message}
+        </div>
+      )}
+
+      {!isLoading && rows.length === 0 && (
+        <div className="border border-dashed border-zinc-800 p-16 text-center">
+          <p className="font-mono text-zinc-500">⟨ NO ACTIVE INTENTS ⟩</p>
           <Link
-            href="/create"
-            className="rounded-md bg-[--color-accent] px-5 py-2 text-sm font-medium text-[--color-accent-fg] transition hover:bg-[--color-accent-hover]"
+            href={"/create" as Route}
+            className="mt-4 inline-block text-label-caps text-[--color-primary] hover:underline"
           >
-            New intent →
+            Be the first to open one →
           </Link>
         </div>
+      )}
 
-        {isLoading && (
-          <p className="mt-12 text-center text-sm text-[--color-muted]">
-            Loading on-chain intents…
-          </p>
-        )}
-
-        {error && (
-          <div className="mt-12 rounded-md border border-[--color-danger] bg-[--color-danger]/10 p-3 text-sm text-[--color-danger]">
-            {error.message}
+      {rows.length > 0 && (
+        <div className="glass-card flex flex-col overflow-hidden">
+          <div className="flex items-center justify-between border-b border-zinc-800 p-6">
+            <h3 className="text-label-caps flex items-center gap-2 text-zinc-400">
+              <span className="h-1.5 w-1.5 bg-[--color-primary]" />
+              Order Book
+            </h3>
+            <div className="flex gap-4">
+              <Legend color="bg-[--color-primary]" label="Open" />
+              <Legend color="bg-zinc-500" label="Filled" />
+              <Legend color="bg-orange-500" label="Cancelled" />
+            </div>
           </div>
-        )}
 
-        {!isLoading && rows.length === 0 && (
-          <div className="mt-12 rounded-xl border border-dashed border-[--color-border] p-12 text-center">
-            <p className="text-[--color-muted]">No intents yet.</p>
-            <Link
-              href="/create"
-              className="mt-4 inline-block text-sm font-medium text-[--color-accent] hover:underline"
-            >
-              Be the first to post one →
-            </Link>
-          </div>
-        )}
-
-        {rows.length > 0 && (
-          <div className="mt-8 overflow-hidden rounded-xl border border-[--color-border]">
-            <table className="w-full">
-              <thead className="bg-[--color-surface] text-left text-xs uppercase tracking-wider text-[--color-muted]">
-                <tr>
-                  <Th>ID</Th>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b border-zinc-800 bg-zinc-900/50">
+                  <Th>Intent ID</Th>
                   <Th>Pair</Th>
                   <Th>Mode</Th>
                   <Th>Maker</Th>
+                  <Th>Volume (Encrypted)</Th>
                   <Th>Status</Th>
                   <Th>Expires</Th>
-                  <Th />
+                  <Th align="right">Action</Th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[--color-border]">
+              <tbody className="divide-y divide-zinc-800/50">
                 {rows.map((row) => (
                   <tr
                     key={row.id.toString()}
-                    className="bg-[--color-surface] transition hover:bg-[--color-surface-elevated]"
+                    className="group transition-colors hover:bg-zinc-800/20"
                   >
                     <Td>
-                      <span data-numeric>#{row.id.toString()}</span>
+                      <span className="font-mono text-xs text-zinc-400">
+                        #IX_{row.id.toString().padStart(4, "0")}
+                      </span>
                     </Td>
                     <Td>
-                      <span className="font-mono">
-                        {TOKEN_NAMES[row.sellToken.toLowerCase()] ??
-                          shortAddress(row.sellToken)}
-                        {" → "}
-                        {TOKEN_NAMES[row.buyToken.toLowerCase()] ??
-                          shortAddress(row.buyToken)}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs text-zinc-400">
+                          {TOKEN_NAMES[row.sellToken.toLowerCase()] ??
+                            shortAddress(row.sellToken)}
+                        </span>
+                        <span className="material-symbols-outlined text-[10px] text-zinc-600">
+                          arrow_forward
+                        </span>
+                        <span className="font-mono text-xs text-[--color-primary]">
+                          {TOKEN_NAMES[row.buyToken.toLowerCase()] ??
+                            shortAddress(row.buyToken)}
+                        </span>
+                      </div>
                     </Td>
                     <Td>
                       <ModeBadge mode={row.mode} />
                     </Td>
                     <Td>
-                      <span className="font-mono text-xs">
+                      <span className="font-mono text-[11px] text-zinc-500">
                         {shortAddress(row.maker)}
                       </span>
+                    </Td>
+                    <Td>
+                      <div className="border border-zinc-800 bg-zinc-950 px-2 py-1 font-mono text-[10px] text-zinc-600">
+                        {row.sellAmountHandle.slice(0, 10)}…[NOX]
+                      </div>
                     </Td>
                     <Td>
                       <StatusBadge status={row.status} />
@@ -104,54 +130,116 @@ export default function IntentsPage() {
                     <Td>
                       <RelativeTime ts={row.deadline} />
                     </Td>
-                    <Td>
-                      <Link
-                        href={`/intents/${row.id.toString()}`}
-                        className="text-sm text-[--color-accent] hover:underline"
-                      >
-                        Open →
-                      </Link>
+                    <Td align="right">
+                      {row.status === 0 && (
+                        <Link
+                          href={
+                            (row.mode === 1
+                              ? `/rfq/${row.id.toString()}`
+                              : `/intents/${row.id.toString()}`) as Route
+                          }
+                          className="text-label-caps border border-zinc-800 bg-zinc-900 px-3 py-1 text-[--color-primary] transition-all hover:bg-[--color-primary] hover:text-[--color-primary-fg]"
+                        >
+                          {row.mode === 1 ? "Place Bid" : "Accept"}
+                        </Link>
+                      )}
+                      {row.status !== 0 && (
+                        <Link
+                          href={`/intents/${row.id.toString()}` as Route}
+                          className="text-label-caps text-zinc-600 hover:text-zinc-300"
+                        >
+                          View
+                        </Link>
+                      )}
                     </Td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        )}
-      </main>
-    </>
+
+          <div className="flex items-center justify-between border-t border-zinc-800 bg-zinc-900/30 p-4">
+            <span className="font-mono text-[10px] text-zinc-600">
+              SHOWING {rows.length} INTENTS
+            </span>
+            <div className="font-mono text-[10px] text-zinc-600">
+              ENCRYPTED_VOLUME · NOX_LAYER
+            </div>
+          </div>
+        </div>
+      )}
+    </AppShell>
   );
 }
 
-function Th({ children }: { children?: React.ReactNode }) {
-  return <th className="px-4 py-3 text-xs font-medium">{children}</th>;
+function Th({
+  children,
+  align,
+}: {
+  children?: React.ReactNode;
+  align?: "right";
+}) {
+  return (
+    <th
+      className={`text-label-caps px-6 py-4 text-zinc-500 ${
+        align === "right" ? "text-right" : ""
+      }`}
+    >
+      {children}
+    </th>
+  );
 }
 
-function Td({ children }: { children?: React.ReactNode }) {
-  return <td className="px-4 py-3 text-sm">{children}</td>;
+function Td({
+  children,
+  align,
+}: {
+  children?: React.ReactNode;
+  align?: "right";
+}) {
+  return (
+    <td
+      className={`px-6 py-4 text-sm ${
+        align === "right" ? "text-right" : ""
+      }`}
+    >
+      {children}
+    </td>
+  );
+}
+
+function Legend({ color, label }: { color: string; label: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      <div className={`h-2 w-2 rounded-full ${color}`} />
+      <span className="font-mono text-[9px] uppercase text-zinc-500">
+        {label}
+      </span>
+    </div>
+  );
 }
 
 function ModeBadge({ mode }: { mode: number }) {
   const cls =
     mode === 0
-      ? "bg-blue-500/10 text-blue-400"
-      : "bg-purple-500/10 text-purple-400";
+      ? "border-orange-900 bg-orange-950/40 text-orange-400"
+      : "border-emerald-900 bg-emerald-950/40 text-emerald-400";
   return (
-    <span className={`rounded px-2 py-1 text-xs font-medium ${cls}`}>
-      {modeLabel(mode)}
+    <span className={`text-label-caps border px-2 py-0.5 text-[10px] ${cls}`}>
+      {mode === 0 ? "Direct 1:1" : "Public RFQ"}
     </span>
   );
 }
 
 function StatusBadge({ status }: { status: number }) {
   const map: Record<number, string> = {
-    0: "bg-[--color-success]/10 text-[--color-success]",
-    1: "bg-[--color-muted]/20 text-[--color-muted]",
-    2: "bg-[--color-warning]/10 text-[--color-warning]",
-    3: "bg-[--color-muted]/10 text-[--color-muted]",
+    0: "border-emerald-900 bg-emerald-950/40 text-emerald-400",
+    1: "border-zinc-800 bg-zinc-900/40 text-zinc-500",
+    2: "border-orange-900 bg-orange-950/40 text-orange-400",
+    3: "border-zinc-800 bg-zinc-900/40 text-zinc-600",
   };
   return (
-    <span className={`rounded px-2 py-1 text-xs font-medium ${map[status]}`}>
+    <span className={`text-label-caps border px-2 py-0.5 text-[10px] ${map[status]}`}>
       {statusLabel(status)}
     </span>
   );
@@ -159,10 +247,19 @@ function StatusBadge({ status }: { status: number }) {
 
 function RelativeTime({ ts }: { ts: bigint }) {
   const seconds = Number(ts) - Math.floor(Date.now() / 1000);
-  if (seconds <= 0) return <span className="text-[--color-muted]">expired</span>;
+  if (seconds <= 0)
+    return (
+      <span className="font-mono text-xs text-zinc-600">expired</span>
+    );
   if (seconds < 3600)
-    return <span data-numeric>{Math.floor(seconds / 60)}m</span>;
+    return (
+      <span className="font-mono text-xs">{Math.floor(seconds / 60)}m</span>
+    );
   if (seconds < 86400)
-    return <span data-numeric>{Math.floor(seconds / 3600)}h</span>;
-  return <span data-numeric>{Math.floor(seconds / 86400)}d</span>;
+    return (
+      <span className="font-mono text-xs">{Math.floor(seconds / 3600)}h</span>
+    );
+  return (
+    <span className="font-mono text-xs">{Math.floor(seconds / 86400)}d</span>
+  );
 }
