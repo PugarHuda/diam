@@ -141,7 +141,7 @@ export default function FaucetPage() {
           <ol className="mt-2 list-decimal space-y-1 pl-5">
             <li>Mint balance for both tokens you want to trade</li>
             <li>
-              Approve PrivateOTC as operator on each cToken (one-time, in your
+              Approve Diam as operator on each cToken (one-time, in your
               wallet)
             </li>
             <li>

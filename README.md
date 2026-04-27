@@ -1,6 +1,8 @@
-# PrivateOTC
+# Diam
 
 > **Your trade. Their guess. Nobody knows.**
+
+`diam` — Indonesian for "silent". A confidential OTC desk where amounts stay hidden, bids stay sealed, and trades stay quiet.
 
 On-chain OTC desk with hidden amounts and Vickrey-fair price discovery, built on iExec Nox confidential computing protocol.
 
@@ -12,14 +14,14 @@ Submission untuk [iExec Vibe Coding Challenge](https://dorahacks.io/hackathon/vi
 
 ---
 
-## What is PrivateOTC?
+## What is Diam?
 
 Whales dan institusi yang mau swap large size hari ini punya 2 pilihan, both buruk:
 
 1. **Public DEX (Uniswap, dst.)** — slippage tinggi, MEV sandwich, sinyal pasar bocor
 2. **OTC desk via Telegram (GSR, Cumberland)** — manual, no audit trail, butuh trust
 
-PrivateOTC adalah opsi ketiga: **on-chain OTC dengan amount terenkripsi**.
+Diam adalah opsi ketiga: **on-chain OTC dengan amount terenkripsi**.
 
 - Settlement on-chain via ERC-7984 confidential tokens
 - Direct OTC (1 maker ↔ 1 taker) atau RFQ Mode (1 maker ↔ N taker, Vickrey pricing)
@@ -33,7 +35,7 @@ PrivateOTC adalah opsi ketiga: **on-chain OTC dengan amount terenkripsi**.
 ┌─────────────────────────────────────────┐
 │  MCP Plugin Layer                       │
 │  AI agents (Claude/Cursor/ChainGPT) ────┼──► Standardized MCP tools
-│  call PrivateOTC via standardized tools │   for AI-native trading
+│  call Diam via standardized tools │   for AI-native trading
 └─────────────────────────────────────────┘
               ▼
 ┌─────────────────────────────────────────┐
@@ -66,9 +68,9 @@ PrivateOTC adalah opsi ketiga: **on-chain OTC dengan amount terenkripsi**.
 ## Project Structure
 
 ```
-private-otc/
+diam/
 ├── packages/
-│   ├── contracts/      # Solidity + Foundry
+│   ├── contracts/      # Solidity + Foundry (PrivateOTC.sol on-chain)
 │   ├── web/            # Next.js frontend
 │   ├── agents/         # Compound Engineering autonomous agents
 │   └── mcp-server/     # MCP server exposing OTC as AI tool
@@ -131,7 +133,7 @@ pnpm mcp:dev
 
 | Contract | Address |
 |---|---|
-| `PrivateOTC` | [`0x32C6552b0FB40833568ECb44aF70A44059FE3FF5`](https://sepolia.arbiscan.io/address/0x32C6552b0FB40833568ECb44aF70A44059FE3FF5) |
+| `Diam` | [`0x32C6552b0FB40833568ECb44aF70A44059FE3FF5`](https://sepolia.arbiscan.io/address/0x32C6552b0FB40833568ECb44aF70A44059FE3FF5) |
 | `cUSDC` (mock ERC-7984) | [`0xb0a42fEf01c0B9A2C264024483B6716A5AD6fA04`](https://sepolia.arbiscan.io/address/0xb0a42fEf01c0B9A2C264024483B6716A5AD6fA04) |
 | `cETH` (mock ERC-7984) | [`0x6c745b2A55d7e7b48B226a33c65a5912ECC54630`](https://sepolia.arbiscan.io/address/0x6c745b2A55d7e7b48B226a33c65a5912ECC54630) |
 

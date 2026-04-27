@@ -1,4 +1,4 @@
-# PrivateOTC — Demo Video Script (4 menit)
+# Diam — Demo Video Script (4 menit)
 
 > Storyboard untuk recording. Target tone: institutional, confident, fast-paced.
 > Aim: 240 seconds, 5 scenes.
@@ -9,7 +9,7 @@
 - [ ] Browser: Chrome incognito, MetaMask connected ke Arbitrum Sepolia
 - [ ] Wallet 1 (Maker): funded with 0.05 ETH, has cUSDC + cETH minted from faucet
 - [ ] Wallet 2 (Taker): funded, has cUSDC minted
-- [ ] PrivateOTC frontend running: `pnpm dev` on localhost:3000
+- [ ] Diam frontend running: `pnpm dev` on localhost:3000
 - [ ] Etherscan tab open: https://sepolia.arbiscan.io/address/0x32C6552b0FB40833568ECb44aF70A44059FE3FF5
 - [ ] Uniswap tab open with ETH/USDC swap pre-loaded for the "pain" comparison
 - [ ] Telegram screenshot of OTC desk chat (use mockup if don't have real one)
@@ -47,7 +47,7 @@
 ## Scene 3 — The Demo (1:15 → 2:45, 90s)
 
 **Visual:**
-- 1:15 — Cut to PrivateOTC landing page on localhost:3000. Highlight tagline: "Your trade. Their guess. Nobody knows."
+- 1:15 — Cut to Diam landing page on localhost:3000. Highlight tagline: "Your trade. Their guess. Nobody knows."
 - 1:22 — Wallet 1 (Maker): connect wallet, click Faucet. Mint 100 cETH. Highlight that amount is encrypted on-chain via Nox.
 - 1:32 — Click "Create Intent" → "RFQ Mode". Form: sell 50 cETH for cUSDC, deadline 1 hour.
 - 1:42 — Click submit. Show encrypting animation, then MetaMask sign, then tx confirm. "Encrypted in TEE, settled on Arbitrum, gas paid in ETH."
@@ -58,7 +58,7 @@
 - 2:38 — Cut to /portfolio. Maker decrypts received cUSDC → shows actual amount they got. Other accounts can't decrypt — shows "Access denied".
 
 **Voice-over (90s):**
-> "Now watch this. PrivateOTC, built on iExec Nox, deployed on Arbitrum Sepolia. I'm the maker. I mint a hundred confidential ETH from the faucet — already encrypted, no one sees the amount.
+> "Now watch this. Diam, built on iExec Nox, deployed on Arbitrum Sepolia. I'm the maker. I mint a hundred confidential ETH from the faucet — already encrypted, no one sees the amount.
 >
 > I open an RFQ to sell fifty cETH for cUSDC. One hour bidding window. Submit. Encrypted via Nox in a Trusted Execution Environment, posted on-chain. On Etherscan you see the IntentCreated event — but the amount is a 32-byte handle, not a number.
 >
@@ -78,7 +78,7 @@
 - 3:23 — Architecture diagram: 3 layers stacked — MCP Plugin (top), Compound Engineering Agents (middle), Core Protocol (bottom).
 
 **Voice-over (45s):**
-> "But trades are just primitives. The real value is what runs on top. PrivateOTC ships three layers. The Core Protocol — Solidity contracts and a Next.js frontend. A Compound Engineering layer — autonomous agents that bid for you, sweep expired RFQs, and analyze your trades nightly via ChainGPT. And an MCP server — so AI agents like Claude or Cursor can trade through PrivateOTC with one prompt. Vibe coding all the way down."
+> "But trades are just primitives. The real value is what runs on top. Diam ships three layers. The Core Protocol — Solidity contracts and a Next.js frontend. A Compound Engineering layer — autonomous agents that bid for you, sweep expired RFQs, and analyze your trades nightly via ChainGPT. And an MCP server — so AI agents like Claude or Cursor can trade through Diam with one prompt. Vibe coding all the way down."
 
 ---
 
@@ -87,11 +87,11 @@
 **Visual:**
 - 3:30 — Cut to text card: "Same outcome as GSR's Zama trade — but permissionless, on-chain, programmable, AI-native."
 - 3:40 — Logos: iExec Nox, ChainGPT, Arbitrum, Claude (small).
-- 3:48 — GitHub URL displayed: github.com/[your-repo]/private-otc. Demo URL: privateotc.vercel.app (placeholder).
-- 3:55 — Final card: "PrivateOTC. Your trade. Their guess. Nobody knows."
+- 3:48 — GitHub URL displayed: github.com/PugarHuda/diam. Demo URL: private-otc.vercel.app.
+- 3:55 — Final card: "Diam. Your trade. Their guess. Nobody knows."
 
 **Voice-over (30s):**
-> "PrivateOTC. Built in five days using vibe coding tools — Claude Code, ChainGPT, iExec Nox SDK. Hidden amounts. Vickrey-fair pricing. Compound Engineering agents. AI-native via MCP. Same institutional outcome as the GSR-Zama trade — but permissionless, on-chain, programmable. iExec Vibe Coding Challenge. Submission by Pugar Huda. Thank you."
+> "Diam. Built in five days using vibe coding tools — Claude Code, ChainGPT, iExec Nox SDK. Hidden amounts. Vickrey-fair pricing. Compound Engineering agents. AI-native via MCP. Same institutional outcome as the GSR-Zama trade — but permissionless, on-chain, programmable. iExec Vibe Coding Challenge. Submission by Pugar Huda. Thank you."
 
 ---
 

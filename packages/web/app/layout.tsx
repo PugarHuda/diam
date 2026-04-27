@@ -16,11 +16,11 @@ const jetbrains = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "PrivateOTC — Confidential OTC Desk on Nox",
+  title: "Diam — Confidential OTC Desk on Nox",
   description:
     "On-chain OTC desk with hidden amounts and Vickrey-fair price discovery, built on iExec Nox protocol.",
   openGraph: {
-    title: "PrivateOTC",
+    title: "Diam",
     description: "Your trade. Their guess. Nobody knows.",
   },
 };

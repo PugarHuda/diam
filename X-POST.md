@@ -7,15 +7,15 @@
 ## Option A — Single tweet (concise, professional)
 
 ```
-🔒 PrivateOTC — confidential OTC desk on @iEx_ec Nox protocol
+🔒 Diam — confidential OTC desk on @iEx_ec Nox protocol
 
-Whales lose ~$5M/day to MEV on public DEXs. PrivateOTC settles
+Whales lose ~$5M/day to MEV on public DEXs. Diam settles
 institutional trades on-chain with hidden amounts and Vickrey-fair
 RFQ pricing. Built in 5 days with @Chain_GPT.
 
 Demo: [video link]
-Code: github.com/[your-repo]/private-otc
-Live: privateotc.vercel.app
+Code: github.com/PugarHuda/diam
+Live: private-otc.vercel.app
 
 Submission for #iExecVibeCoding 🛠️
 ```
@@ -26,7 +26,7 @@ Submission for #iExecVibeCoding 🛠️
 
 ### Tweet 1
 ```
-🔒 Introducing PrivateOTC
+🔒 Introducing Diam
 
 An on-chain OTC desk where amounts stay encrypted end-to-end.
 Built on @iEx_ec Nox protocol + @Chain_GPT for the Vibe Coding Challenge.
@@ -49,7 +49,7 @@ Institutions stay out. $30T waits.
 
 ### Tweet 3
 ```
-The solution: PrivateOTC
+The solution: Diam
 
 ✅ Hidden amounts (Nox confidential computing on Arbitrum Sepolia)
 ✅ Vickrey-fair RFQ (highest bid wins, pays second-highest, encrypted)
@@ -78,7 +78,7 @@ Strategy B (atomic safeSub + select) means failed bids settle as no-ops, on-chai
 
 Full feedback for the @iEx_ec team in the repo.
 
-Code → github.com/[your-repo]/private-otc
+Code → github.com/PugarHuda/diam
 ```
 
 ### Tweet 6 (optional bookend)

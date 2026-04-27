@@ -9,9 +9,9 @@ export function Header() {
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
         <Link href="/" className="flex items-center gap-2 font-semibold">
           <span className="grid h-8 w-8 place-items-center rounded-md bg-gradient-to-br from-[#7c3aed] to-[#a78bfa] text-sm font-bold text-white">
-            P
+            D
           </span>
-          PrivateOTC
+          Diam
         </Link>
         <nav className="flex items-center gap-6 text-sm text-[--color-muted]">
           <Link className="transition hover:text-[--color-foreground]" href="/intents">

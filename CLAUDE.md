@@ -1,4 +1,4 @@
-# PrivateOTC — Claude Project Context
+# Diam — Claude Project Context
 
 ## What is this?
 

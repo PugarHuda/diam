@@ -1,11 +1,11 @@
 # Feedback on iExec Nox Protocol
 
-> Pengalaman builder PrivateOTC selama iExec Vibe Coding Challenge (April–Mei 2026).
+> Pengalaman builder Diam selama iExec Vibe Coding Challenge (April–Mei 2026).
 > Ditulis setelah ship: 5 git commits, 4 packages monorepo, 3 contracts deployed di Arbitrum Sepolia.
 
 ## Konteks Builder
 
-- **Project:** PrivateOTC — confidential OTC desk dengan Vickrey RFQ + Compound Engineering agents + MCP server
+- **Project:** Diam — confidential OTC desk dengan Vickrey RFQ + Compound Engineering agents + MCP server
 - **Stack:** Solidity 0.8.27 + Foundry, Next.js 16 + Viem, `@iexec-nox/handle@0.1.0-beta.10`, `@iexec-nox/nox-protocol-contracts@0.2.2`
 - **Network:** Arbitrum Sepolia
 - **Tools utama:** Claude Code (vibe coding), ChainGPT API
@@ -106,7 +106,7 @@ Untuk OTC use case kami, Nox menang karena: (a) composable dengan ERC-20/7984, (
 
 ## Apa yang akan kami bangun selanjutnya
 
-PrivateOTC adalah seed. Roadmap:
+Diam adalah seed. Roadmap:
 - Multi-chain deployment (Optimism, Base) setelah Nox expand.
 - Real-time MEV-resistant order matching (off-chain solver, on-chain settlement).
 - Compound Engineering agent marketplace (deploy your own bot, share strategy templates encrypted).
