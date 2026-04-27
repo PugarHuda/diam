@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Route } from "next";
 import { Header } from "@/components/Header";
 
 export default function CreatePage() {
@@ -39,7 +40,7 @@ function ModeCard({
   description,
   badge,
 }: {
-  href: string;
+  href: Route;
   title: string;
   tagline: string;
   description: string;
