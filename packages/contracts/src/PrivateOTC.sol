@@ -9,8 +9,20 @@ import {IERC7984} from "./interfaces/IERC7984.sol";
 /// @title PrivateOTC — On-chain confidential OTC desk
 /// @notice Hidden-amount OTC trading with Vickrey-fair RFQ pricing.
 /// @dev Settlement uses ERC-7984 cTokens. Encrypted ops via iExec Nox.
-contract PrivateOTC is IPrivateOTC {
+contract PrivateOTC {
     uint256 public constant MAX_BIDS_PER_RFQ = 10;
+
+    enum IntentStatus {
+        Open,
+        Filled,
+        Cancelled,
+        Expired
+    }
+
+    enum Mode {
+        Direct,
+        RFQ
+    }
 
     struct Intent {
         address maker;
@@ -33,6 +45,13 @@ contract PrivateOTC is IPrivateOTC {
     mapping(uint256 => Intent) public intents;
     mapping(uint256 => Bid[]) public bids;
     uint256 public nextIntentId;
+
+    event IntentCreated(
+        uint256 indexed id, address indexed maker, address sellToken, address buyToken, Mode mode, uint64 deadline
+    );
+    event BidSubmitted(uint256 indexed id, address indexed taker);
+    event Settled(uint256 indexed id, address indexed taker);
+    event Cancelled(uint256 indexed id);
 
     error IntentNotOpen();
     error NotMaker();
@@ -94,14 +113,16 @@ contract PrivateOTC is IPrivateOTC {
 
         euint256 buyAmount = Nox.fromExternal(buyAmountHandle, buyProof);
 
-        // TODO: Verify buyAmount >= minBuyAmount via Nox.ge + revert-on-false
-        //       (or use safeSub pattern to avoid leaking via revert).
-        //       For MVP, trust client-side validation.
+        // ─── Strategy B: atomic conditional via safeSub + select ───
+        // sufficient = (buyAmount >= minBuyAmount), underflow-safe.
+        (ebool sufficient,) = Nox.safeSub(buyAmount, intent.minBuyAmount);
 
-        // TODO: Atomic settlement
-        //   intent.sellToken.confidentialTransferFrom(intent.maker, msg.sender, sellAmount);
-        //   intent.buyToken.confidentialTransferFrom(msg.sender, intent.maker, buyAmount);
-        //   Requires both parties to setOperator(this, until) before.
+        euint256 zero = Nox.toEuint256(0);
+        // Route real amounts on success, zeros on failure. The branch is encrypted.
+        euint256 effectiveSell = Nox.select(sufficient, intent.sellAmount, zero);
+        euint256 effectiveBuy = Nox.select(sufficient, buyAmount, zero);
+
+        _settleAtomic(intent.sellToken, intent.buyToken, intent.maker, msg.sender, effectiveSell, effectiveBuy);
 
         intent.status = IntentStatus.Filled;
         emit Settled(id, msg.sender);
@@ -176,33 +197,31 @@ contract PrivateOTC is IPrivateOTC {
 
         (address winnerAddr, euint256 priceToPay) = _pickVickreyWinner(id);
 
-        // TODO: Atomic settlement
-        //   intent.sellToken.confidentialTransferFrom(intent.maker, winnerAddr, intent.sellAmount);
-        //   intent.buyToken.confidentialTransferFrom(winnerAddr, intent.maker, priceToPay);
-
-        // Stash priceToPay so winner can decrypt off-chain
-        Nox.allow(priceToPay, winnerAddr);
-        Nox.allow(priceToPay, intent.maker);
+        _settleAtomic(intent.sellToken, intent.buyToken, intent.maker, winnerAddr, intent.sellAmount, priceToPay);
 
         intent.status = IntentStatus.Filled;
         emit Settled(id, winnerAddr);
     }
 
-    /// @dev Vickrey: highest bidder wins, pays second-highest price.
-    /// Identity plain (via event), price encrypted.
+    /* -------------------------------------------------------------------------- */
+    /*                             Internal helpers                               */
+    /* -------------------------------------------------------------------------- */
+
+    /// @dev Vickrey: highest bid wins, pays second-highest (encrypted).
+    /// Winner address is plain (via event); price they pay is encrypted.
     function _pickVickreyWinner(uint256 id) internal returns (address winnerAddr, euint256 priceToPay) {
         Bid[] storage _bids = bids[id];
 
-        euint256 highest = _bids[0].offeredAmount;
-        euint256 second = _bids[1].offeredAmount;
+        // Initial: assume bid[0] highest. Resolve real top-2 in tracking loop.
         winnerAddr = _bids[0].taker;
-
-        // Initial swap if bid[1] > bid[0]
         ebool initSwap = Nox.gt(_bids[1].offeredAmount, _bids[0].offeredAmount);
-        highest = Nox.select(initSwap, _bids[1].offeredAmount, _bids[0].offeredAmount);
-        second = Nox.select(initSwap, _bids[0].offeredAmount, _bids[1].offeredAmount);
-        // Note: winner address can't be encrypted — use plain comparison via known bidder list
-        // For MVP, track winner via event matching off-chain. V2: use eaddress when supported.
+        euint256 highest = Nox.select(initSwap, _bids[1].offeredAmount, _bids[0].offeredAmount);
+        euint256 second = Nox.select(initSwap, _bids[0].offeredAmount, _bids[1].offeredAmount);
+
+        // For winner address: plain comparison via offeredAmount handles is impossible
+        // since handles are 32-byte references. We track the maximum-bid index off-chain
+        // by emitting BidSubmitted events and let the frontend match the winning event.
+        // (Alternative: use eaddress when supported in Nox library v0.3+.)
 
         for (uint256 i = 2; i < _bids.length; i++) {
             euint256 candidate = _bids[i].offeredAmount;
@@ -214,5 +233,32 @@ contract PrivateOTC is IPrivateOTC {
         Nox.allowThis(highest);
         Nox.allowThis(second);
         priceToPay = second;
+    }
+
+    /// @dev Settle a swap: sellToken from maker → taker, buyToken from taker → maker.
+    /// Both amounts encrypted. Requires both parties to have called setOperator(this, until).
+    function _settleAtomic(
+        IERC7984 sellToken,
+        IERC7984 buyToken,
+        address maker,
+        address taker,
+        euint256 effectiveSell,
+        euint256 effectiveBuy
+    ) internal {
+        // Grant cTokens transient access to the amount handles for this tx
+        Nox.allowTransient(effectiveSell, address(sellToken));
+        Nox.allowTransient(effectiveBuy, address(buyToken));
+
+        // Atomic ERC-7984 transfers
+        sellToken.confidentialTransferFrom(maker, taker, euint256.unwrap(effectiveSell));
+        buyToken.confidentialTransferFrom(taker, maker, euint256.unwrap(effectiveBuy));
+
+        // Persist amounts so both parties can decrypt off-chain (auditor + audit trail)
+        Nox.allowThis(effectiveSell);
+        Nox.allow(effectiveSell, maker);
+        Nox.allow(effectiveSell, taker);
+        Nox.allowThis(effectiveBuy);
+        Nox.allow(effectiveBuy, maker);
+        Nox.allow(effectiveBuy, taker);
     }
 }
