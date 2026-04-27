@@ -125,9 +125,13 @@ pnpm mcp:dev
 
 ## Deployed Contracts (Arbitrum Sepolia)
 
-- `PrivateOTC`: [TODO: address after deploy]
-- Uses `cUSDC` from cdefi.iex.ec faucet
-- Uses `cETH` from cdefi.iex.ec faucet
+| Contract | Address |
+|---|---|
+| `PrivateOTC` | [`0x32C6552b0FB40833568ECb44aF70A44059FE3FF5`](https://sepolia.arbiscan.io/address/0x32C6552b0FB40833568ECb44aF70A44059FE3FF5) |
+| `cUSDC` (mock ERC-7984) | [`0xb0a42fEf01c0B9A2C264024483B6716A5AD6fA04`](https://sepolia.arbiscan.io/address/0xb0a42fEf01c0B9A2C264024483B6716A5AD6fA04) |
+| `cETH` (mock ERC-7984) | [`0x6c745b2A55d7e7b48B226a33c65a5912ECC54630`](https://sepolia.arbiscan.io/address/0x6c745b2A55d7e7b48B226a33c65a5912ECC54630) |
+
+**NoxCompute proxy** (provided by iExec): [`0xd464B198f06756a1d00be223634b85E0a731c229`](https://sepolia.arbiscan.io/address/0xd464B198f06756a1d00be223634b85E0a731c229)
 
 ## Documentation
 

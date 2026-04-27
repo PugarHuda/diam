@@ -1,18 +1,45 @@
 /**
  * Settlement Monitor Agent — post-trade verifier.
  *
- * Listens for Settled events. Auto-decrypts amounts using auditor key.
- * Verifies trade matched expected outcome. Posts to webhook + writes
- * encrypted audit log.
+ * Listens for Settled events. For demo: posts a Slack/Discord-style webhook
+ * with txHash + parties (amounts stay encrypted).
  */
 
-export async function startSettlementMonitor() {
-  console.log("[settlement-monitor] started");
+import { publicClient, PRIVATE_OTC_ADDRESS, env } from "../config.js";
+import { privateOtcAbi } from "../abi.js";
 
-  // TODO: viem watchContractEvent on PrivateOTC.Settled
-  // For each Settled event:
-  //   1. Fetch maker's outgoing balance handle (post-settle)
-  //   2. Decrypt via auditor's stored key
-  //   3. Compare against expected sell amount
-  //   4. POST { id, taker, ok, timestamp } to webhook
+export async function startSettlementMonitor() {
+  console.log("[settlement-monitor] starting");
+
+  publicClient.watchContractEvent({
+    address: PRIVATE_OTC_ADDRESS,
+    abi: privateOtcAbi,
+    eventName: "Settled",
+    onLogs: async (logs) => {
+      for (const log of logs) {
+        const id = log.args.id;
+        const taker = log.args.taker;
+        const txHash = log.transactionHash;
+
+        const message = {
+          text: `🔒 OTC settled — intent #${id?.toString()} → taker ${taker}\nhttps://sepolia.arbiscan.io/tx/${txHash}`,
+        };
+
+        if (env.AGENT_NOTIFICATION_WEBHOOK) {
+          try {
+            await fetch(env.AGENT_NOTIFICATION_WEBHOOK, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(message),
+            });
+            console.log(`[settlement-monitor] notified for #${id}`);
+          } catch (err) {
+            console.error("[settlement-monitor] webhook failed", err);
+          }
+        } else {
+          console.log("[settlement-monitor]", message.text);
+        }
+      }
+    },
+  });
 }
