@@ -6,6 +6,9 @@ import type { Route } from "next";
 import { parseUnits } from "viem";
 import { useAccount } from "wagmi";
 import { AppShell } from "@/components/AppShell";
+import { PageHeader, SectionHeader } from "@/components/PageHeader";
+import { EmptyState } from "@/components/EmptyState";
+import { TokenIcon } from "@/components/TokenIcon";
 import { useFaucet } from "@/lib/hooks/useFaucet";
 import { CUSDC_ADDRESS, CETH_ADDRESS } from "@/lib/wagmi";
 
@@ -40,33 +43,32 @@ export default function FaucetPage() {
 
   return (
     <AppShell>
-      <header className="mb-8">
-        <h1 className="text-headline-xl text-3xl font-bold tracking-tight text-white">
-          FAUCET
-        </h1>
-        <p className="mt-1 font-mono text-xs text-zinc-500">
-          MOCK_ERC7984_DISPENSER | TESTNET_ONLY
-        </p>
-      </header>
+      <PageHeader
+        icon="water_drop"
+        title="FAUCET"
+        subtitle="MOCK_ERC7984_DISPENSER | TESTNET_ONLY"
+      />
 
       {!isConnected && (
-        <div className="glass-card p-12 text-center">
-          <p className="font-mono text-zinc-500">⟨ CONNECT WALLET TO MINT ⟩</p>
-        </div>
+        <EmptyState
+          icon="account_circle_off"
+          title="CONNECT WALLET TO MINT"
+          body="A connected wallet on Arbitrum Sepolia is required"
+        />
       )}
 
       {isConnected && (
         <div className="grid grid-cols-12 gap-6">
           <section className="col-span-12 lg:col-span-7">
             <div className="glass-card p-6">
-              <h3 className="text-label-caps mb-6 flex items-center gap-2 text-zinc-400">
-                <span className="h-1.5 w-1.5 bg-[--color-primary]" />
-                Mint Confidential Tokens
-              </h3>
+              <SectionHeader icon="water_drop" title="Mint Confidential Tokens" />
 
               <form onSubmit={onMint} className="space-y-6">
                 <div>
-                  <label className="text-label-caps mb-2 block text-zinc-500">
+                  <label className="text-label-caps mb-2 flex items-center gap-1.5 text-zinc-500">
+                    <span className="material-symbols-outlined text-sm">
+                      token
+                    </span>
                     Token
                   </label>
                   <div className="grid grid-cols-2 gap-2">
@@ -78,18 +80,21 @@ export default function FaucetPage() {
                           setSelected(t);
                           setAmount(t.defaultMint);
                         }}
-                        className={`border p-4 text-left transition-all ${
+                        className={`flex items-center gap-3 border p-4 text-left transition-all ${
                           selected.symbol === t.symbol
                             ? "border-[--color-primary] bg-[--color-primary]/10"
                             : "border-zinc-800 hover:border-[--color-primary]/40"
                         }`}
                       >
-                        <p className="font-display text-sm font-bold">
-                          {t.symbol}
-                        </p>
-                        <p className="mt-1 font-mono text-[10px] text-zinc-600">
-                          {t.address.slice(0, 10)}…{t.address.slice(-8)}
-                        </p>
+                        <TokenIcon symbol={t.symbol} size="sm" />
+                        <div>
+                          <p className="font-display text-sm font-bold">
+                            {t.symbol}
+                          </p>
+                          <p className="mt-0.5 font-mono text-[10px] text-zinc-600">
+                            {t.address.slice(0, 8)}…{t.address.slice(-6)}
+                          </p>
+                        </div>
                       </button>
                     ))}
                   </div>
@@ -97,10 +102,16 @@ export default function FaucetPage() {
 
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <label className="text-label-caps text-zinc-500">
+                    <label className="text-label-caps flex items-center gap-1.5 text-zinc-500">
+                      <span className="material-symbols-outlined text-sm">
+                        pin
+                      </span>
                       Amount
                     </label>
-                    <span className="font-mono text-[9px] uppercase text-[--color-primary]">
+                    <span className="flex items-center gap-1 font-mono text-[9px] uppercase text-[--color-primary]">
+                      <span className="material-symbols-outlined text-xs">
+                        enhanced_encryption
+                      </span>
                       ENCRYPTED ON SUBMIT
                     </span>
                   </div>
@@ -153,8 +164,19 @@ export default function FaucetPage() {
                 <button
                   type="submit"
                   disabled={busy}
-                  className="diam-btn-primary w-full py-4 text-sm"
+                  className="diam-btn-primary flex w-full items-center justify-center gap-2 py-4 text-sm"
                 >
+                  <span
+                    className={`material-symbols-outlined text-base ${
+                      busy ? "animate-spin" : ""
+                    }`}
+                  >
+                    {step === "encrypting" && "enhanced_encryption"}
+                    {step === "signing" && "draw"}
+                    {step === "confirming" && "sync"}
+                    {(step === "idle" || step === "error") && "water_drop"}
+                    {step === "done" && "check_circle"}
+                  </span>
                   {step === "encrypting" && "ENCRYPTING VIA NOX…"}
                   {step === "signing" && "CONFIRM IN WALLET…"}
                   {step === "confirming" && "MINTING ON-CHAIN…"}

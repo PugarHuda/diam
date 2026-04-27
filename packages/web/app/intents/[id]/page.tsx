@@ -6,6 +6,8 @@ import type { Route } from "next";
 import { useAccount, useReadContract } from "wagmi";
 import { parseUnits } from "viem";
 import { AppShell } from "@/components/AppShell";
+import { PageHeader, SectionHeader } from "@/components/PageHeader";
+import { TokenIcon } from "@/components/TokenIcon";
 import { privateOtcAbi } from "@/lib/abi/privateOtc";
 import { PRIVATE_OTC_ADDRESS, CUSDC_ADDRESS, CETH_ADDRESS } from "@/lib/wagmi";
 import { useAcceptIntent, useCancelIntent } from "@/lib/hooks/useOtcWrites";
@@ -115,46 +117,49 @@ export default function IntentDetailPage({
 
   return (
     <AppShell>
-      <p className="mb-6">
-        <Link
-          href={"/intents" as Route}
-          className="text-label-caps text-zinc-500 hover:text-[--color-primary]"
-        >
-          ← All Intents
-        </Link>
-      </p>
-
-      <header className="mb-8 flex items-end justify-between">
-        <div>
-          <h1 className="text-headline-xl text-3xl font-bold tracking-tight text-white">
-            INTENT #IX_{id.padStart(4, "0")}
-          </h1>
-          <p className="mt-1 font-mono text-xs text-zinc-500">
-            DIRECT_OTC | BILATERAL_SETTLEMENT
-          </p>
-        </div>
-        <span className="text-label-caps border border-orange-900 bg-orange-950/40 px-3 py-1 text-orange-400">
-          {modeLabel(intent.mode)}
+      <Link
+        href={"/intents" as Route}
+        className="text-label-caps mb-6 inline-flex items-center gap-1.5 text-zinc-500 hover:text-[--color-primary]"
+      >
+        <span className="material-symbols-outlined text-base">
+          arrow_back
         </span>
-      </header>
+        All Intents
+      </Link>
+
+      <PageHeader
+        icon="receipt_long"
+        title={`INTENT #IX_${id.padStart(4, "0")}`}
+        subtitle="DIRECT_OTC | BILATERAL_SETTLEMENT"
+        badge={
+          <span className="text-label-caps flex items-center gap-1.5 border border-orange-900 bg-orange-950/40 px-3 py-1 text-orange-400">
+            <span className="material-symbols-outlined text-base">person</span>
+            {modeLabel(intent.mode)}
+          </span>
+        }
+      />
+
 
       <div className="grid grid-cols-12 gap-6">
         {/* Detail panel */}
         <section className="col-span-12 lg:col-span-7">
           <div className="glass-card p-6">
-            <h3 className="text-label-caps mb-6 flex items-center gap-2 text-zinc-400">
-              <span className="h-1.5 w-1.5 bg-[--color-primary]" />
-              Intent Manifest
-            </h3>
+            <SectionHeader icon="article" title="Intent Manifest" />
 
             <dl className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <DetailField label="Status" value={statusLabel(intent.status)} />
               <DetailField
+                icon="flag"
+                label="Status"
+                value={statusLabel(intent.status)}
+              />
+              <DetailField
+                icon="person"
                 label="Maker"
                 value={shortAddress(intent.maker, 6)}
                 mono
               />
               <DetailField
+                icon="upload"
                 label="Sell Asset"
                 value={
                   TOKEN_NAMES[intent.sellToken.toLowerCase()]?.symbol ??
@@ -163,6 +168,7 @@ export default function IntentDetailPage({
                 mono
               />
               <DetailField
+                icon="download"
                 label="Buy Asset"
                 value={
                   TOKEN_NAMES[intent.buyToken.toLowerCase()]?.symbol ??
@@ -171,18 +177,21 @@ export default function IntentDetailPage({
                 mono
               />
               <DetailField
+                icon="lock"
                 label="Sell Amount (Encrypted)"
-                value={`${intent.sellAmountHandle.slice(0, 14)}…[NOX]`}
+                value={`${intent.sellAmountHandle.slice(0, 14)}…`}
                 mono
                 small
               />
               <DetailField
+                icon="lock"
                 label="Min Buy (Encrypted)"
-                value={`${intent.minBuyAmountHandle.slice(0, 14)}…[NOX]`}
+                value={`${intent.minBuyAmountHandle.slice(0, 14)}…`}
                 mono
                 small
               />
               <DetailField
+                icon="schedule"
                 label="Expires"
                 value={new Date(
                   Number(intent.deadline) * 1000,
@@ -190,6 +199,7 @@ export default function IntentDetailPage({
                 small
               />
               <DetailField
+                icon="group"
                 label="Allowed Taker"
                 value={
                   intent.allowedTaker ===
@@ -200,6 +210,24 @@ export default function IntentDetailPage({
                 mono
               />
             </dl>
+
+            <div className="mt-6 flex items-center justify-center gap-3 border-t border-zinc-800 pt-6">
+              <TokenIcon
+                symbol={
+                  TOKEN_NAMES[intent.sellToken.toLowerCase()]?.symbol ?? "?"
+                }
+                size="lg"
+              />
+              <span className="material-symbols-outlined text-2xl text-[--color-primary]">
+                arrow_forward
+              </span>
+              <TokenIcon
+                symbol={
+                  TOKEN_NAMES[intent.buyToken.toLowerCase()]?.symbol ?? "?"
+                }
+                size="lg"
+              />
+            </div>
           </div>
         </section>
 
@@ -327,26 +355,35 @@ export default function IntentDetailPage({
 }
 
 function DetailField({
+  icon,
   label,
   value,
   mono,
   small,
 }: {
+  icon?: string;
   label: string;
   value: string;
   mono?: boolean;
   small?: boolean;
 }) {
   return (
-    <div>
-      <dt className="text-label-caps text-zinc-500">{label}</dt>
-      <dd
-        className={`mt-1 ${mono ? "font-mono" : ""} ${
-          small ? "text-xs" : "text-sm"
-        } text-zinc-200`}
-      >
-        {value}
-      </dd>
+    <div className="flex items-start gap-3">
+      {icon && (
+        <span className="material-symbols-outlined mt-0.5 text-base text-[--color-primary]/60">
+          {icon}
+        </span>
+      )}
+      <div className="flex-1">
+        <dt className="text-label-caps text-zinc-500">{label}</dt>
+        <dd
+          className={`mt-1 ${mono ? "font-mono" : ""} ${
+            small ? "text-xs" : "text-sm"
+          } text-zinc-200`}
+        >
+          {value}
+        </dd>
+      </div>
     </div>
   );
 }

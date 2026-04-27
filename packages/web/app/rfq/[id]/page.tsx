@@ -6,6 +6,7 @@ import type { Route } from "next";
 import { useAccount, useReadContract, useReadContracts } from "wagmi";
 import { parseUnits } from "viem";
 import { AppShell } from "@/components/AppShell";
+import { PageHeader, SectionHeader } from "@/components/PageHeader";
 import { privateOtcAbi } from "@/lib/abi/privateOtc";
 import { PRIVATE_OTC_ADDRESS, CUSDC_ADDRESS, CETH_ADDRESS } from "@/lib/wagmi";
 import { useSubmitBid, useFinalizeRfq } from "@/lib/hooks/useOtcWrites";
@@ -137,46 +138,48 @@ export default function RfqDetailPage({
 
   return (
     <AppShell>
-      <p className="mb-6">
-        <Link
-          href={"/intents" as Route}
-          className="text-label-caps text-zinc-500 hover:text-[--color-primary]"
-        >
-          ← All Intents
-        </Link>
-      </p>
-
-      <header className="mb-8 flex items-end justify-between">
-        <div>
-          <h1 className="text-headline-xl text-3xl font-bold tracking-tight text-white">
-            RFQ #IX_{id.padStart(4, "0")}
-          </h1>
-          <p className="mt-1 font-mono text-xs text-zinc-500">
-            VICKREY_AUCTION | {sellSym}_TO_{buyTok?.symbol ?? "?"}
-          </p>
-        </div>
-        <span className="text-label-caps border border-emerald-900 bg-emerald-950/40 px-3 py-1 text-emerald-400">
-          Public RFQ
+      <Link
+        href={"/intents" as Route}
+        className="text-label-caps mb-6 inline-flex items-center gap-1.5 text-zinc-500 hover:text-[--color-primary]"
+      >
+        <span className="material-symbols-outlined text-base">
+          arrow_back
         </span>
-      </header>
+        All Intents
+      </Link>
+
+      <PageHeader
+        icon="gavel"
+        title={`RFQ #IX_${id.padStart(4, "0")}`}
+        subtitle={`VICKREY_AUCTION | ${sellSym}_TO_${buyTok?.symbol ?? "?"}`}
+        badge={
+          <span className="text-label-caps flex items-center gap-1.5 border border-emerald-900 bg-emerald-950/40 px-3 py-1 text-emerald-400">
+            <span className="material-symbols-outlined text-base">hub</span>
+            Public RFQ
+          </span>
+        }
+      />
+
 
       <Countdown remaining={remaining} expired={isExpired} />
 
       <div className="mt-6 grid grid-cols-12 gap-6">
         <section className="col-span-12 lg:col-span-7">
           <div className="glass-card p-6">
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-label-caps flex items-center gap-2 text-zinc-400">
-                <span className="h-1.5 w-1.5 bg-[--color-primary]" />
-                Sealed Bids
-              </h3>
-              <p
-                className="text-headline-lg text-3xl text-[--color-primary]"
-                data-numeric
-              >
-                {bids.length}
-              </p>
-            </div>
+            <SectionHeader
+              icon="inventory_2"
+              title="Sealed Bids"
+              right={
+                <p
+                  className="flex items-center gap-2 text-3xl text-[--color-primary]"
+                  data-numeric
+                >
+                  <span className="material-symbols-outlined">lock</span>
+                  {bids.length}
+                </p>
+              }
+            />
+
 
             <p className="mb-6 font-mono text-[11px] text-zinc-500">
               Amounts encrypted — only winner & maker decrypt the price after
@@ -270,14 +273,30 @@ export default function RfqDetailPage({
                   submitBid.step === "signing" ||
                   submitBid.step === "confirming"
                 }
-                className="diam-btn-primary w-full py-4 text-sm"
+                className="diam-btn-primary flex w-full items-center justify-center gap-2 py-4 text-sm"
               >
+                <span
+                  className={`material-symbols-outlined text-base ${
+                    submitBid.step === "encrypting" ||
+                    submitBid.step === "confirming"
+                      ? "animate-spin"
+                      : ""
+                  }`}
+                >
+                  {submitBid.step === "encrypting" && "enhanced_encryption"}
+                  {submitBid.step === "signing" && "draw"}
+                  {submitBid.step === "confirming" && "sync"}
+                  {(submitBid.step === "idle" ||
+                    submitBid.step === "error") &&
+                    "lock"}
+                  {submitBid.step === "done" && "check_circle"}
+                </span>
                 {submitBid.step === "encrypting" && "ENCRYPTING BID…"}
                 {submitBid.step === "signing" && "CONFIRM IN WALLET…"}
                 {submitBid.step === "confirming" && "SUBMITTING…"}
                 {(submitBid.step === "idle" || submitBid.step === "error") &&
                   "SUBMIT SEALED BID"}
-                {submitBid.step === "done" && "SUBMITTED ✓"}
+                {submitBid.step === "done" && "SUBMITTED"}
               </button>
             </form>
           )}
@@ -296,13 +315,24 @@ export default function RfqDetailPage({
                 disabled={
                   finalize.step === "signing" || finalize.step === "confirming"
                 }
-                className="diam-btn-primary w-full py-4 text-sm"
+                className="diam-btn-primary flex w-full items-center justify-center gap-2 py-4 text-sm"
               >
+                <span
+                  className={`material-symbols-outlined text-base ${
+                    finalize.step === "confirming" ? "animate-spin" : ""
+                  }`}
+                >
+                  {finalize.step === "signing" && "draw"}
+                  {finalize.step === "confirming" && "sync"}
+                  {(finalize.step === "idle" || finalize.step === "error") &&
+                    "gavel"}
+                  {finalize.step === "done" && "check_circle"}
+                </span>
                 {finalize.step === "signing" && "CONFIRM IN WALLET…"}
                 {finalize.step === "confirming" && "RUNNING VICKREY…"}
                 {(finalize.step === "idle" || finalize.step === "error") &&
                   "FINALIZE RFQ"}
-                {finalize.step === "done" && "FINALIZED ✓"}
+                {finalize.step === "done" && "FINALIZED"}
               </button>
               {finalize.error && (
                 <p className="mt-2 font-mono text-[10px] text-[--color-danger]">

@@ -1,22 +1,18 @@
 import Link from "next/link";
 import type { Route } from "next";
 import { AppShell } from "@/components/AppShell";
+import { PageHeader } from "@/components/PageHeader";
 
 export default function CreatePage() {
   return (
     <AppShell>
-      <header className="flex items-end justify-between">
-        <div>
-          <h1 className="text-headline-xl text-3xl font-bold tracking-tight text-white">
-            CREATE INTENT
-          </h1>
-          <p className="mt-1 font-mono text-xs text-zinc-500">
-            CHOOSE_EXECUTION_MODE | NETWORK: ARBITRUM_SEPOLIA
-          </p>
-        </div>
-      </header>
+      <PageHeader
+        icon="add_circle"
+        title="CREATE INTENT"
+        subtitle="CHOOSE_EXECUTION_MODE | NETWORK: ARBITRUM_SEPOLIA"
+      />
 
-      <div className="mt-10 grid grid-cols-1 gap-6 md:grid-cols-2">
+      <div className="mt-2 grid grid-cols-1 gap-6 md:grid-cols-2">
         <ModeCard
           href="/create/direct"
           tier="Mode 01"
@@ -44,21 +40,29 @@ export default function CreatePage() {
         />
       </div>
 
-      <div className="mt-12 rounded-none border border-zinc-800 bg-zinc-900/30 p-6">
-        <p className="text-label-caps mb-3 text-zinc-500">
-          STRATEGY_B_GUARANTEE
-        </p>
-        <p className="text-sm text-zinc-400">
-          When a bid falls below your hidden minimum, Diam settles the trade as
-          an{" "}
-          <span className="font-mono text-[--color-primary]">
-            atomic no-op via Nox.safeSub + Nox.select
-          </span>
-          . The on-chain status is always{" "}
-          <span className="font-mono text-[--color-primary]">Filled</span> —
-          observers cannot distinguish a successful trade from a rejected one.
-          Privacy preserved on every outcome.
-        </p>
+      <div className="mt-12 flex items-start gap-3 border border-zinc-800 bg-zinc-900/30 p-6">
+        <span
+          className="material-symbols-outlined text-[--color-primary]"
+          style={{ fontVariationSettings: "'FILL' 1" }}
+        >
+          gpp_good
+        </span>
+        <div>
+          <p className="text-label-caps mb-2 text-zinc-500">
+            STRATEGY_B_GUARANTEE
+          </p>
+          <p className="text-sm text-zinc-400">
+            When a bid falls below your hidden minimum, Diam settles the trade
+            as an{" "}
+            <span className="font-mono text-[--color-primary]">
+              atomic no-op via Nox.safeSub + Nox.select
+            </span>
+            . The on-chain status is always{" "}
+            <span className="font-mono text-[--color-primary]">Filled</span> —
+            observers cannot distinguish a successful trade from a rejected
+            one. Privacy preserved on every outcome.
+          </p>
+        </div>
       </div>
     </AppShell>
   );

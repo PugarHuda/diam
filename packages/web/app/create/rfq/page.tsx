@@ -5,6 +5,7 @@ import { useState } from "react";
 import type { Route } from "next";
 import { parseUnits } from "viem";
 import { AppShell } from "@/components/AppShell";
+import { PageHeader, SectionHeader } from "@/components/PageHeader";
 import { useCreateRfq } from "@/lib/hooks/useOtcWrites";
 import { CUSDC_ADDRESS, CETH_ADDRESS } from "@/lib/wagmi";
 
@@ -46,35 +47,35 @@ export default function RfqCreatePage() {
 
   return (
     <AppShell>
-      <header className="mb-8 flex items-end justify-between">
-        <div>
-          <h1 className="text-headline-xl text-3xl font-bold tracking-tight text-white">
-            RFQ MODE
-          </h1>
-          <p className="mt-1 font-mono text-xs text-zinc-500">
-            VICKREY_ENGINE | SECOND_PRICE_SEALED_BID
-          </p>
-        </div>
-        <div className="flex bg-zinc-900 p-1 border border-zinc-800">
-          <Link
-            href={"/create/direct" as Route}
-            className="px-6 py-2 text-zinc-500 text-label-caps hover:text-zinc-300"
-          >
-            Direct OTC
-          </Link>
-          <span className="px-6 py-2 bg-[--color-primary] text-[--color-primary-fg] text-label-caps">
-            RFQ Mode
-          </span>
-        </div>
-      </header>
+      <PageHeader
+        icon="hub"
+        title="RFQ MODE"
+        subtitle="VICKREY_ENGINE | SECOND_PRICE_SEALED_BID"
+        action={
+          <div className="flex border border-zinc-800 bg-zinc-900 p-1">
+            <Link
+              href={"/create/direct" as Route}
+              className="text-label-caps flex items-center gap-1.5 px-4 py-2 text-zinc-500 hover:text-zinc-300"
+            >
+              <span className="material-symbols-outlined text-base">
+                swap_horiz
+              </span>
+              Direct
+            </Link>
+            <span className="text-label-caps flex items-center gap-1.5 bg-[--color-primary] px-4 py-2 text-[--color-primary-fg]">
+              <span className="material-symbols-outlined text-base">hub</span>
+              RFQ
+            </span>
+          </div>
+        }
+      />
+
 
       <div className="grid grid-cols-12 gap-6">
         <section className="col-span-12 lg:col-span-7">
           <div className="glass-card p-6">
-            <h3 className="text-label-caps mb-6 flex items-center gap-2 text-zinc-400">
-              <span className="h-1.5 w-1.5 bg-[--color-primary]" />
-              Open Sealed-Bid Auction
-            </h3>
+            <SectionHeader icon="gavel" title="Open Sealed-Bid Auction" />
+
 
             <form onSubmit={onSubmit} className="space-y-6">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -205,13 +206,24 @@ export default function RfqCreatePage() {
               <button
                 type="submit"
                 disabled={busy}
-                className="diam-btn-primary w-full py-4 text-sm"
+                className="diam-btn-primary flex w-full items-center justify-center gap-2 py-4 text-sm"
               >
+                <span
+                  className={`material-symbols-outlined text-base ${
+                    busy ? "animate-spin" : ""
+                  }`}
+                >
+                  {step === "encrypting" && "enhanced_encryption"}
+                  {step === "signing" && "draw"}
+                  {step === "confirming" && "sync"}
+                  {(step === "idle" || step === "error") && "gavel"}
+                  {step === "done" && "check_circle"}
+                </span>
                 {step === "encrypting" && "ENCRYPTING VIA NOX…"}
                 {step === "signing" && "CONFIRM IN WALLET…"}
                 {step === "confirming" && "OPENING ON-CHAIN…"}
                 {(step === "idle" || step === "error") && "OPEN AUCTION"}
-                {step === "done" && "BROADCAST COMPLETE ✓"}
+                {step === "done" && "BROADCAST COMPLETE"}
               </button>
             </form>
           </div>
@@ -244,21 +256,34 @@ export default function RfqCreatePage() {
             </p>
           </div>
 
-          <div className="glass-card p-6">
-            <p className="text-label-caps mb-3 text-zinc-500">
-              ON_CHAIN_LOGIC
-            </p>
-            <pre className="overflow-x-auto font-mono text-[11px] leading-relaxed text-zinc-400">
-              <code>{`for (uint i = 1; i < bids.length; i++) {
+          <div className="glass-card p-0 overflow-hidden">
+            <div className="flex items-center justify-between border-b border-zinc-800 bg-zinc-900/50 px-4 py-2">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-sm text-zinc-500">
+                  code
+                </span>
+                <span className="font-mono text-[10px] text-zinc-400">
+                  PrivateOTC.sol · _pickVickreyWinner
+                </span>
+              </div>
+              <span className="font-mono text-[10px] text-zinc-600">.SOL</span>
+            </div>
+            <div className="p-4">
+              <pre className="overflow-x-auto font-mono text-[11px] leading-relaxed text-zinc-400">
+                <code>{`for (uint i = 1; i < bids.length; i++) {
   ebool isHigher = Nox.gt(candidate, highest);
   second  = Nox.select(isHigher, highest, second);
   highest = Nox.select(isHigher, candidate, highest);
 }
 priceToPay = second;  // encrypted`}</code>
-            </pre>
-            <p className="mt-3 font-mono text-[10px] text-zinc-600">
-              All comparisons run inside encrypted handles. Cap: 10 bidders.
-            </p>
+              </pre>
+              <p className="mt-3 flex items-center gap-1.5 font-mono text-[10px] text-zinc-600">
+                <span className="material-symbols-outlined text-xs text-[--color-primary]">
+                  info
+                </span>
+                All comparisons run inside encrypted handles. Cap: 10 bidders.
+              </p>
+            </div>
           </div>
         </aside>
       </div>

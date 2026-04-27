@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { parseUnits } from "viem";
 import { AppShell } from "@/components/AppShell";
+import { PageHeader, SectionHeader } from "@/components/PageHeader";
 import { ChainGPTAdvisor } from "@/components/ChainGPTAdvisor";
 import { useCreateIntent } from "@/lib/hooks/useCreateIntent";
 import { CUSDC_ADDRESS, CETH_ADDRESS } from "@/lib/wagmi";
@@ -51,27 +52,29 @@ export default function DirectOtcPage() {
 
   return (
     <AppShell>
-      <header className="mb-8 flex items-end justify-between">
-        <div>
-          <h1 className="text-headline-xl text-3xl font-bold tracking-tight text-white">
-            DIRECT OTC
-          </h1>
-          <p className="mt-1 font-mono text-xs text-zinc-500">
-            INTENT_ENGINE_V2 | BILATERAL_SETTLEMENT
-          </p>
-        </div>
-        <div className="flex bg-zinc-900 p-1 border border-zinc-800">
-          <span className="px-6 py-2 bg-[--color-primary] text-[--color-primary-fg] text-label-caps">
-            Direct OTC
-          </span>
-          <a
-            href="/create/rfq"
-            className="px-6 py-2 text-zinc-500 text-label-caps hover:text-zinc-300"
-          >
-            RFQ Mode
-          </a>
-        </div>
-      </header>
+      <PageHeader
+        icon="swap_horiz"
+        title="DIRECT OTC"
+        subtitle="INTENT_ENGINE_V2 | BILATERAL_SETTLEMENT"
+        action={
+          <div className="flex border border-zinc-800 bg-zinc-900 p-1">
+            <span className="text-label-caps flex items-center gap-1.5 bg-[--color-primary] px-4 py-2 text-[--color-primary-fg]">
+              <span className="material-symbols-outlined text-base">
+                swap_horiz
+              </span>
+              Direct
+            </span>
+            <a
+              href="/create/rfq"
+              className="text-label-caps flex items-center gap-1.5 px-4 py-2 text-zinc-500 hover:text-zinc-300"
+            >
+              <span className="material-symbols-outlined text-base">hub</span>
+              RFQ
+            </a>
+          </div>
+        }
+      />
+
 
       <div className="grid grid-cols-12 gap-6">
         {/* ── Form ────────────────────────────────────── */}
@@ -82,14 +85,12 @@ export default function DirectOtcPage() {
             </div>
             <div className="absolute bottom-2 left-2 h-1 w-1 rounded-full bg-[--color-primary] pulse-soft" />
 
-            <h3 className="text-label-caps mb-6 flex items-center gap-2 text-zinc-400">
-              <span className="h-1.5 w-1.5 bg-[--color-primary]" />
-              Create Direct Intent
-            </h3>
+            <SectionHeader icon="add_circle" title="Create Direct Intent" />
+
 
             <form onSubmit={onSubmit} className="space-y-6">
               <FieldRow>
-                <Field label="Sell Token">
+                <Field label="Sell Token" icon="upload">
                   <Select
                     value={sellSymbol}
                     onChange={setSellSymbol}
@@ -100,6 +101,7 @@ export default function DirectOtcPage() {
                   label="Sell Amount"
                   hint="Encrypted on submit"
                   badge="HIDDEN"
+                  icon="pin"
                 >
                   <NumberInput
                     value={sellAmount}
@@ -118,7 +120,7 @@ export default function DirectOtcPage() {
               </div>
 
               <FieldRow>
-                <Field label="Buy Token">
+                <Field label="Buy Token" icon="download">
                   <Select
                     value={buySymbol}
                     onChange={setBuySymbol}
@@ -129,6 +131,7 @@ export default function DirectOtcPage() {
                   label="Min Buy Amount"
                   hint="Hidden minimum — Strategy B"
                   badge="HIDDEN"
+                  icon="vertical_align_bottom"
                 >
                   <NumberInput
                     value={minBuyAmount}
@@ -138,7 +141,7 @@ export default function DirectOtcPage() {
                 </Field>
               </FieldRow>
 
-              <Field label="Expires In">
+              <Field label="Expires In" icon="timer">
                 <div className="flex gap-2">
                   {DEADLINE_PRESETS.map((p) => (
                     <button
@@ -160,6 +163,7 @@ export default function DirectOtcPage() {
               <Field
                 label="Allowed Taker"
                 hint="Empty = open to anyone · 0x... = locked"
+                icon="person_add"
               >
                 <input
                   type="text"
@@ -202,14 +206,25 @@ export default function DirectOtcPage() {
               <button
                 type="submit"
                 disabled={busy}
-                className="diam-btn-primary w-full py-4 text-sm"
+                className="diam-btn-primary flex w-full items-center justify-center gap-2 py-4 text-sm"
               >
+                <span
+                  className={`material-symbols-outlined text-base ${
+                    busy ? "animate-spin" : ""
+                  }`}
+                >
+                  {step === "encrypting" && "enhanced_encryption"}
+                  {step === "signing" && "draw"}
+                  {step === "confirming" && "sync"}
+                  {(step === "idle" || step === "error") && "send"}
+                  {step === "done" && "check_circle"}
+                </span>
                 {step === "encrypting" && "ENCRYPTING VIA NOX…"}
                 {step === "signing" && "CONFIRM IN WALLET…"}
                 {step === "confirming" && "CONFIRMING ON-CHAIN…"}
                 {(step === "idle" || step === "error") &&
                   "BROADCAST ENCRYPTION"}
-                {step === "done" && "BROADCAST COMPLETE ✓"}
+                {step === "done" && "BROADCAST COMPLETE"}
               </button>
             </form>
           </div>
@@ -278,19 +293,29 @@ function Field({
   label,
   hint,
   badge,
+  icon,
   children,
 }: {
   label: string;
   hint?: string;
   badge?: string;
+  icon?: string;
   children: React.ReactNode;
 }) {
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <label className="text-label-caps text-zinc-500">{label}</label>
+        <label className="text-label-caps flex items-center gap-1.5 text-zinc-500">
+          {icon && (
+            <span className="material-symbols-outlined text-sm">{icon}</span>
+          )}
+          {label}
+        </label>
         {badge && (
-          <span className="font-mono text-[9px] uppercase text-[--color-primary]">
+          <span className="flex items-center gap-1 font-mono text-[9px] uppercase text-[--color-primary]">
+            <span className="material-symbols-outlined text-xs">
+              visibility_off
+            </span>
             {badge}
           </span>
         )}

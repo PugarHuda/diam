@@ -3,6 +3,9 @@
 import Link from "next/link";
 import type { Route } from "next";
 import { AppShell } from "@/components/AppShell";
+import { PageHeader, SectionHeader } from "@/components/PageHeader";
+import { EmptyState } from "@/components/EmptyState";
+import { TokenIcon } from "@/components/TokenIcon";
 import { useIntents, statusLabel, modeLabel } from "@/lib/hooks/useIntents";
 import { shortAddress } from "@/lib/utils";
 import { CUSDC_ADDRESS, CETH_ADDRESS } from "@/lib/wagmi";
@@ -17,58 +20,68 @@ export default function IntentsPage() {
 
   return (
     <AppShell>
-      <header className="mb-8 flex items-end justify-between">
-        <div>
-          <h1 className="text-headline-xl text-3xl font-bold tracking-tight text-white">
-            ACTIVE INTENTS
-          </h1>
-          <p className="mt-1 font-mono text-xs text-zinc-500">
-            ASSET_PAIRS_VISIBLE | AMOUNTS_ENCRYPTED
-          </p>
-        </div>
-        <Link href={"/create" as Route}>
-          <button className="diam-btn-primary px-5 py-2 text-xs">
-            + New Intent
-          </button>
-        </Link>
-      </header>
+      <PageHeader
+        icon="grid_view"
+        title="ACTIVE INTENTS"
+        subtitle="ASSET_PAIRS_VISIBLE | AMOUNTS_ENCRYPTED"
+        action={
+          <Link href={"/create" as Route}>
+            <button className="diam-btn-primary flex items-center gap-2 px-5 py-2 text-xs">
+              <span className="material-symbols-outlined text-base">add</span>
+              New Intent
+            </button>
+          </Link>
+        }
+      />
 
       {isLoading && (
-        <p className="py-12 text-center font-mono text-sm text-zinc-500">
-          ⟨ FETCHING ON-CHAIN INTENTS ⟩
-        </p>
+        <div className="flex items-center justify-center gap-2 py-12 font-mono text-sm text-zinc-500">
+          <span className="material-symbols-outlined animate-spin text-base">
+            sync
+          </span>
+          FETCHING ON-CHAIN INTENTS
+        </div>
       )}
 
       {error && (
-        <div className="border border-[--color-danger] bg-[--color-danger]/10 p-3 font-mono text-sm text-[--color-danger]">
+        <div className="flex items-start gap-3 border border-[--color-danger] bg-[--color-danger]/10 p-3 font-mono text-sm text-[--color-danger]">
+          <span className="material-symbols-outlined text-base">error</span>
           {error.message}
         </div>
       )}
 
       {!isLoading && rows.length === 0 && (
-        <div className="border border-dashed border-zinc-800 p-16 text-center">
-          <p className="font-mono text-zinc-500">⟨ NO ACTIVE INTENTS ⟩</p>
-          <Link
-            href={"/create" as Route}
-            className="mt-4 inline-block text-label-caps text-[--color-primary] hover:underline"
-          >
-            Be the first to open one →
-          </Link>
-        </div>
+        <EmptyState
+          icon="inbox"
+          title="NO ACTIVE INTENTS"
+          body="No one has opened a trade yet on this network"
+          action={
+            <Link href={"/create" as Route}>
+              <button className="diam-btn-primary flex items-center gap-2 px-5 py-2 text-xs">
+                <span className="material-symbols-outlined text-base">
+                  add
+                </span>
+                Open the first one
+              </button>
+            </Link>
+          }
+        />
       )}
 
       {rows.length > 0 && (
         <div className="glass-card flex flex-col overflow-hidden">
-          <div className="flex items-center justify-between border-b border-zinc-800 p-6">
-            <h3 className="text-label-caps flex items-center gap-2 text-zinc-400">
-              <span className="h-1.5 w-1.5 bg-[--color-primary]" />
-              Order Book
-            </h3>
-            <div className="flex gap-4">
-              <Legend color="bg-[--color-primary]" label="Open" />
-              <Legend color="bg-zinc-500" label="Filled" />
-              <Legend color="bg-orange-500" label="Cancelled" />
-            </div>
+          <div className="border-b border-zinc-800 p-6">
+            <SectionHeader
+              icon="menu_book"
+              title="Order Book"
+              right={
+                <div className="flex gap-4">
+                  <Legend color="bg-[--color-primary]" label="Open" />
+                  <Legend color="bg-zinc-500" label="Filled" />
+                  <Legend color="bg-orange-500" label="Cancelled" />
+                </div>
+              }
+            />
           </div>
 
           <div className="overflow-x-auto">
@@ -98,17 +111,21 @@ export default function IntentsPage() {
                     </Td>
                     <Td>
                       <div className="flex items-center gap-2">
-                        <span className="font-mono text-xs text-zinc-400">
-                          {TOKEN_NAMES[row.sellToken.toLowerCase()] ??
-                            shortAddress(row.sellToken)}
-                        </span>
-                        <span className="material-symbols-outlined text-[10px] text-zinc-600">
+                        <TokenIcon
+                          symbol={
+                            TOKEN_NAMES[row.sellToken.toLowerCase()] ?? "?"
+                          }
+                          size="sm"
+                        />
+                        <span className="material-symbols-outlined text-sm text-zinc-600">
                           arrow_forward
                         </span>
-                        <span className="font-mono text-xs text-[--color-primary]">
-                          {TOKEN_NAMES[row.buyToken.toLowerCase()] ??
-                            shortAddress(row.buyToken)}
-                        </span>
+                        <TokenIcon
+                          symbol={
+                            TOKEN_NAMES[row.buyToken.toLowerCase()] ?? "?"
+                          }
+                          size="sm"
+                        />
                       </div>
                     </Td>
                     <Td>
@@ -120,8 +137,11 @@ export default function IntentsPage() {
                       </span>
                     </Td>
                     <Td>
-                      <div className="border border-zinc-800 bg-zinc-950 px-2 py-1 font-mono text-[10px] text-zinc-600">
-                        {row.sellAmountHandle.slice(0, 10)}…[NOX]
+                      <div className="flex items-center gap-2 border border-zinc-800 bg-zinc-950 px-2 py-1 font-mono text-[10px] text-zinc-600">
+                        <span className="material-symbols-outlined text-sm text-[--color-primary]/40">
+                          lock
+                        </span>
+                        {row.sellAmountHandle.slice(0, 10)}…
                       </div>
                     </Td>
                     <Td>
