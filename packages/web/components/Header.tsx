@@ -23,6 +23,9 @@ export function Header() {
           <Link className="transition hover:text-[--color-foreground]" href="/portfolio">
             Portfolio
           </Link>
+          <Link className="transition hover:text-[--color-foreground]" href="/faucet">
+            Faucet
+          </Link>
         </nav>
         <ConnectButton accountStatus="address" chainStatus="icon" showBalance={false} />
       </div>

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Header } from "@/components/Header";
+import { ChainGPTAdvisor } from "@/components/ChainGPTAdvisor";
 import { useCreateIntent } from "@/lib/hooks/useCreateIntent";
 import { CUSDC_ADDRESS, CETH_ADDRESS } from "@/lib/wagmi";
 import { parseUnits } from "viem";
@@ -120,6 +121,13 @@ export default function DirectOtcPage() {
               className="w-full rounded-md border border-[--color-border] bg-[--color-surface] px-3 py-2 font-mono text-sm focus:border-[--color-accent] focus:outline-none"
             />
           </FormField>
+
+          {sellAmount && minBuyAmount && Number(sellAmount) > 0 && (
+            <ChainGPTAdvisor
+              pair={`${sellTok.symbol}/${buyTok.symbol}`}
+              unitPriceUsd={Number(minBuyAmount) / Number(sellAmount)}
+            />
+          )}
 
           {error && (
             <div className="rounded-md border border-[--color-danger] bg-[--color-danger]/10 p-3 text-sm text-[--color-danger]">
