@@ -6,6 +6,10 @@ On-chain OTC desk with hidden amounts and Vickrey-fair price discovery, built on
 
 Submission untuk [iExec Vibe Coding Challenge](https://dorahacks.io/hackathon/vibe-coding-iexec) (April-Mei 2026).
 
+**🚀 Live demo:** https://private-otc.vercel.app
+**📡 Network:** Arbitrum Sepolia
+**🔍 Inspect:** https://vercel.com/hudas-projects-a8e7f558/private-otc
+
 ---
 
 ## What is PrivateOTC?
