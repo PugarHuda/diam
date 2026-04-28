@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import type { Route } from "next";
+import { useAccount } from "wagmi";
 import { AppShell } from "@/components/AppShell";
 import { PageHeader, SectionHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
@@ -17,6 +18,7 @@ const TOKEN_NAMES: Record<string, string> = {
 };
 
 export default function IntentsPage() {
+  const { address } = useAccount();
   const { rows, isLoading, error } = useIntents(20);
 
   return (
@@ -144,8 +146,14 @@ export default function IntentsPage() {
                       <ModeBadge mode={row.mode} />
                     </Td>
                     <Td>
-                      <span className="font-mono text-[11px] text-zinc-500">
+                      <span className="flex items-center gap-1.5 font-mono text-[11px] text-zinc-500">
                         {shortAddress(row.maker)}
+                        {address &&
+                          row.maker.toLowerCase() === address.toLowerCase() && (
+                            <span className="text-label-caps border border-[--color-primary]/40 bg-[--color-primary]/10 px-1.5 py-0.5 text-[8px] text-[--color-primary]">
+                              YOU
+                            </span>
+                          )}
                       </span>
                     </Td>
                     <Td>

@@ -9,6 +9,7 @@ import { AppShell } from "@/components/AppShell";
 import { PageHeader, SectionHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { TokenIcon } from "@/components/TokenIcon";
+import { HelpHint } from "@/components/Tooltip";
 import { useFaucet } from "@/lib/hooks/useFaucet";
 import { CUSDC_ADDRESS, CETH_ADDRESS } from "@/lib/wagmi";
 
@@ -208,8 +209,9 @@ export default function FaucetPage() {
             </div>
 
             <div className="glass-card p-4">
-              <p className="text-label-caps mb-2 text-zinc-500">
-                MOCK_ERC7984_NOTE
+              <p className="text-label-caps mb-2 flex items-center gap-1.5 text-zinc-500">
+                ERC-7984
+                <HelpHint content="ERC-7984 is the Confidential Fungible Token standard. Balances and amounts are stored as encrypted bytes32 handles, not plaintext. Diam's MockCToken implements full spec: 8 transfer functions, operator pattern, ACL via Nox primitives." />
               </p>
               <p className="font-mono text-[11px] leading-relaxed text-zinc-400">
                 MockCToken is a real ERC-7984 implementation (~150 LOC) using

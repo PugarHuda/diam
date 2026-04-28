@@ -11,7 +11,8 @@
     "market-maker": "tsx src/market-maker/index.ts",
     "rfq-sweeper": "tsx src/rfq-sweeper/index.ts",
     "strategy-coach": "tsx src/strategy-coach/index.ts",
-    "settlement-monitor": "tsx src/settlement-monitor/index.ts"
+    "settlement-monitor": "tsx src/settlement-monitor/index.ts",
+    "seed": "tsx src/seed/index.ts"
   },
   "dependencies": {
     "viem": "^2.21.55",
