@@ -2,9 +2,11 @@ import Link from "next/link";
 import type { Route } from "next";
 import { Header } from "@/components/Header";
 import { LiveStats } from "@/components/LiveStats";
+import { ActivityFeed } from "@/components/ActivityFeed";
 import { CopyButton } from "@/components/CopyButton";
 import { CornerBrackets } from "@/components/CornerBrackets";
 import { TerminalCursor } from "@/components/TerminalCursor";
+import { HelpHint } from "@/components/Tooltip";
 import {
   HeroAnnotations,
   TerminalCardHeader,
@@ -177,12 +179,36 @@ export default function HomePage() {
             />
           </div>
 
-          <div className="mx-auto mt-8 flex max-w-[1200px] justify-between px-4 font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-700">
-            <div>L3_DEPLOYMENT_ACTIVE</div>
-            <div>NOX_PROXY: 0xd464...c229</div>
-            <div>UPTIME: 99.9999%</div>
+          <div className="mx-auto mt-8 flex max-w-[1200px] flex-wrap justify-between gap-3 px-4 font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-700">
+            <a
+              href="https://sepolia.arbiscan.io/address/0x32C6552b0FB40833568ECb44aF70A44059FE3FF5"
+              target="_blank"
+              rel="noreferrer"
+              className="transition-colors hover:text-[--color-primary]"
+            >
+              CONTRACT: 0x32C6…3FF5
+            </a>
+            <a
+              href="https://sepolia.arbiscan.io/address/0xd464B198f06756a1d00be223634b85E0a731c229"
+              target="_blank"
+              rel="noreferrer"
+              className="transition-colors hover:text-[--color-primary]"
+            >
+              NOX_PROXY: 0xd464…c229
+            </a>
+            <a
+              href="https://github.com/PugarHuda/diam"
+              target="_blank"
+              rel="noreferrer"
+              className="transition-colors hover:text-[--color-primary]"
+            >
+              SRC: GITHUB.COM/PUGARHUDA/DIAM
+            </a>
           </div>
         </section>
+
+        {/* ── Live activity feed ─────────────────────────────── */}
+        <ActivityFeed />
 
         {/* ── CTA ────────────────────────────────────────────── */}
         <section className="relative overflow-hidden px-6 py-24">
@@ -287,11 +313,11 @@ export default function HomePage() {
               <div className="space-y-2 font-mono text-xs text-zinc-500">
                 <p className="flex items-center gap-1.5">
                   <span className="h-1.5 w-1.5 rounded-full bg-[--color-primary] pulse-soft" />
-                  L3_DEPLOYMENT_ACTIVE
+                  TEE_ENCRYPTION_ACTIVE
                 </p>
                 <p>NETWORK: ARBITRUM_SEPOLIA</p>
-                <p>NOX_PROXY: 0xd464…c229</p>
-                <p>UPTIME: 99.9999%</p>
+                <p>CHAIN_ID: 421614</p>
+                <p>NOX_VERSION: 0.1.0-beta.10</p>
               </div>
             </div>
           </div>

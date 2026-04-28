@@ -3,6 +3,7 @@ import type { Route } from "next";
 import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/PageHeader";
 import { AuditButton } from "@/components/AuditButton";
+import { HelpHint } from "@/components/Tooltip";
 
 export default function CreatePage() {
   return (
@@ -53,8 +54,9 @@ export default function CreatePage() {
           gpp_good
         </span>
         <div>
-          <p className="text-label-caps mb-2 text-zinc-500">
+          <p className="text-label-caps mb-2 flex items-center gap-1.5 text-zinc-500">
             STRATEGY_B_GUARANTEE
+            <HelpHint content="Strategy B is Diam's privacy-preserving rejection pattern. When a bid is below maker's minimum, the contract uses Nox.safeSub + Nox.select to route encrypted zeros instead of real amounts — atomic no-op, no info leak via revert." />
           </p>
           <p className="text-sm text-zinc-400">
             When a bid falls below your hidden minimum, Diam settles the trade

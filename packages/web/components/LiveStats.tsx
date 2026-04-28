@@ -40,25 +40,25 @@ export function LiveStats() {
     <div className="mx-auto mt-12 grid max-w-3xl grid-cols-2 gap-3 md:grid-cols-4">
       <Stat
         icon="receipt_long"
-        label="TOTAL INTENTS"
+        label="ON-CHAIN INTENTS"
         value={total.toString()}
         animKey={animKey}
         live
       />
       <Stat
         icon="verified_user"
-        label="ENCRYPTED"
-        value="100%"
+        label="ENCRYPTION"
+        value="NOX_TEE"
       />
       <Stat
         icon="hub"
-        label="NETWORK"
-        value="ARB-SEP"
+        label="CHAIN_ID"
+        value="421614"
       />
       <Stat
-        icon="bolt"
-        label="LATENCY"
-        value="<2s"
+        icon="speed"
+        label="BLOCK_TIME"
+        value="~250ms"
       />
     </div>
   );

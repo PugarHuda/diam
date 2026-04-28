@@ -7,6 +7,7 @@ import { parseUnits } from "viem";
 import { AppShell } from "@/components/AppShell";
 import { PageHeader, SectionHeader } from "@/components/PageHeader";
 import { MarketSignal } from "@/components/MarketSignal";
+import { HelpHint } from "@/components/Tooltip";
 import { useCreateRfq } from "@/lib/hooks/useOtcWrites";
 import { CUSDC_ADDRESS, CETH_ADDRESS } from "@/lib/wagmi";
 
@@ -241,8 +242,9 @@ export default function RfqCreatePage() {
               >
                 verified
               </span>
-              <p className="text-label-caps text-[--color-primary]">
+              <p className="text-label-caps flex items-center gap-1.5 text-[--color-primary]">
                 Vickrey Auction
+                <HelpHint content="Nobel-winning sealed-bid auction. Highest bidder wins but pays the second-highest price. Mathematically optimal: bidders' best strategy is to bid their true valuation. No incentive to lie." />
               </p>
             </div>
             <p className="text-sm text-zinc-300">
