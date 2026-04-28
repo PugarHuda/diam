@@ -355,6 +355,10 @@ export default function IntentDetailPage({
               pair={`${TOKEN_NAMES[intent.sellToken.toLowerCase()]?.symbol ?? "?"}/${TOKEN_NAMES[intent.buyToken.toLowerCase()]?.symbol ?? "?"}`}
               intentId={id}
               mode="Direct"
+              txHash={accept.txHash ?? undefined}
+              makerAddress={intent.maker}
+              sellHandle={intent.sellAmountHandle}
+              timestamp={Date.now()}
             />
           )}
         </aside>

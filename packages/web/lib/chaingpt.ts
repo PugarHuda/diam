@@ -270,23 +270,88 @@ export interface NftReceipt {
   /** base64-encoded JPEG data URL */
   imageDataUrl: string;
   prompt: string;
+  /** Unique fingerprint baked into prompt — also used for filename / sharing */
+  fingerprint: string;
+}
+
+export interface NftReceiptInput {
+  pair: string;
+  intentId: string;
+  mode: "Direct" | "RFQ";
+  // Optional unique trade context — when provided, baked into prompt so each
+  // receipt has visually distinct seed
+  txHash?: string;
+  blockNumber?: string;
+  timestamp?: number;
+  makerAddress?: string;
+  /** Encrypted handle for sell amount (bytes32 hex) — used as visual signature */
+  sellHandle?: string;
 }
 
 /**
  * Generate an NFT receipt image for a confidential trade.
- * Endpoint: POST /nft/generate-image (different from /chat/stream)
- * Returns: { statusCode: 201, data: { type: 'Buffer', data: number[] } }
+ *
+ * Each call yields a visually unique image because the prompt embeds:
+ *   - Trade ID + asset pair
+ *   - Mode-specific visual theme (handshake vs auction)
+ *   - Last 6 chars of tx hash → "signature glyph"
+ *   - Block number, time, maker tag → "telemetry watermark"
+ *   - Encrypted handle prefix → "cryptographic fingerprint"
+ *
+ * Endpoint: POST /nft/generate-image · model: velogen · 512x512 JPEG
  */
-export async function generateNftReceipt(opts: {
-  pair: string;
-  intentId: string;
-  mode: "Direct" | "RFQ";
-}): Promise<NftReceipt> {
-  const prompt = `Abstract minimalist NFT receipt for confidential OTC trade.
-Pair: ${opts.pair}. Intent #${opts.intentId}. Mode: ${opts.mode}.
-Style: matrix green neon encryption keys floating, deep black background,
-geometric ledger glyphs, sealed envelope motif, hexagonal lock pattern,
-cyberpunk institutional finance aesthetic, single-color accent on #00FF41.`;
+export async function generateNftReceipt(
+  opts: NftReceiptInput,
+): Promise<NftReceipt> {
+  // Compute fingerprint — short identifier baked into prompt + filename
+  const fingerprint = [
+    `IX${opts.intentId.padStart(4, "0")}`,
+    opts.txHash ? opts.txHash.slice(2, 8).toUpperCase() : "",
+    opts.blockNumber ? `B${opts.blockNumber.slice(-6)}` : "",
+  ]
+    .filter(Boolean)
+    .join("-");
+
+  // Mode-specific theme directives — drives different visual outputs
+  const modeTheme =
+    opts.mode === "RFQ"
+      ? "Multiple sealed envelopes converging into a single hexagonal vault — Vickrey auction motif. Three to five envelopes orbiting around a central glowing seal, suggesting sealed-bid second-price auction. Geometric tension between envelopes."
+      : "Two interlocking handshake glyphs forming a bilateral seal — Direct OTC motif. Two abstract hexagonal sigils meeting at a central transaction point, suggesting atomic peer-to-peer settlement.";
+
+  const handleSig = opts.sellHandle
+    ? opts.sellHandle.slice(2, 10).toUpperCase()
+    : "ENCRYPTED";
+
+  const txSig = opts.txHash ? opts.txHash.slice(-6).toUpperCase() : "PENDING";
+
+  const timeFragment = opts.timestamp
+    ? new Date(opts.timestamp).toISOString().split("T")[0]
+    : new Date().toISOString().split("T")[0];
+
+  const makerTag = opts.makerAddress
+    ? opts.makerAddress.slice(2, 6).toUpperCase()
+    : "0000";
+
+  const prompt = `Abstract minimalist NFT receipt for confidential on-chain trade.
+
+Trade fingerprint: ${fingerprint}
+Asset pair: ${opts.pair}
+Mode: ${opts.mode === "RFQ" ? "Vickrey RFQ Auction" : "Direct OTC Bilateral"}
+Maker tag: 0x${makerTag}
+Encrypted handle signature: 0x${handleSig}
+Tx fingerprint: ${txSig}
+Settlement date: ${timeFragment}
+Network: Arbitrum Sepolia · iExec Nox TEE
+
+Visual theme: ${modeTheme}
+
+Aesthetic style: cyberpunk institutional finance terminal, deep black void
+background (#0A0A0A), single-color matrix green accent (#00FF41), glowing
+neon hexagonal lock pattern, scanlines, embedded ledger glyphs, geometric
+typography reading "${fingerprint}" as etched seal, cryptographic key
+filaments floating in void. Premium dark-pool aesthetic — institutional,
+not playful. Composition is centered with corner brackets like a digital
+certificate.`;
 
   const res = await fetch(`${CHAINGPT_BASE_URL}/nft/generate-image`, {
     method: "POST",
@@ -327,5 +392,6 @@ cyberpunk institutional finance aesthetic, single-color accent on #00FF41.`;
   return {
     imageDataUrl: `data:image/jpeg;base64,${base64}`,
     prompt,
+    fingerprint,
   };
 }

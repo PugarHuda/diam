@@ -356,6 +356,9 @@ export default function RfqDetailPage({
               pair={`${sellSym}/${buyTok?.symbol ?? "?"}`}
               intentId={id}
               mode="RFQ"
+              txHash={finalize.txHash ?? undefined}
+              makerAddress={rfq.maker}
+              timestamp={Date.now()}
             />
           )}
 
