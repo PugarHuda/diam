@@ -1,5 +1,6 @@
 @import "tailwindcss";
-@import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap");
+/* Material Symbols Outlined font is loaded via <link> in app/layout.tsx
+   (CSS @import inside Tailwind v4 isn't reliable for cross-origin Google Fonts) */
 
 @theme {
   /* ─────────── Surfaces ─────────── */
