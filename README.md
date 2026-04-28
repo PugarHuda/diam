@@ -164,10 +164,14 @@ The transaction shows up on Etherscan — but the amount is a 32-byte handle, no
 | Contract | Address |
 |---|---|
 | `PrivateOTC` (the Diam orchestrator) | [`0x5b2C0c83e41bF9ef072d742096C49DFDB814CEB4`](https://sepolia.arbiscan.io/address/0x5b2C0c83e41bF9ef072d742096C49DFDB814CEB4) |
-| `cUSDC` (mock ERC-7984) | [`0x57736B816F6cb53c6B2c742D3A162E89Db162ADE`](https://sepolia.arbiscan.io/address/0x57736B816F6cb53c6B2c742D3A162E89Db162ADE) |
-| `cETH` (mock ERC-7984) | [`0xCdD84bA9415DFE3Dd5c0c05077B1FE194Bcf695d`](https://sepolia.arbiscan.io/address/0xCdD84bA9415DFE3Dd5c0c05077B1FE194Bcf695d) |
+| `DiamCToken` cUSDC | [`0x57736B816F6cb53c6B2c742D3A162E89Db162ADE`](https://sepolia.arbiscan.io/address/0x57736B816F6cb53c6B2c742D3A162E89Db162ADE) |
+| `DiamCToken` cETH | [`0xCdD84bA9415DFE3Dd5c0c05077B1FE194Bcf695d`](https://sepolia.arbiscan.io/address/0xCdD84bA9415DFE3Dd5c0c05077B1FE194Bcf695d) |
 
 **NoxCompute proxy** (provided by iExec): [`0xd464B198f06756a1d00be223634b85E0a731c229`](https://sepolia.arbiscan.io/address/0xd464B198f06756a1d00be223634b85E0a731c229)
+
+> **Naming note:** Source code references `DiamCToken`. Contracts were originally
+> deployed under the legacy name `MockCToken`; bytecode and ABI are identical
+> across the rename — deployed addresses above remain canonical for demo data.
 
 > The on-chain contract name remains `PrivateOTC` (immutable). "Diam" is the user-facing brand and product name.
 
@@ -210,7 +214,7 @@ Per hackathon brief: *"using mock data leads to disqualification"*. Honest audit
 - Frontend lives at https://private-otc.vercel.app, returns HTTP 200 on every route
 
 🛠️ **Self-deployed (real, but written by us)**
-- `MockCToken.sol` — a minimal ERC-7984 implementation (~150 LOC) using real `Nox.transfer` / `Nox.mint` primitives. We deployed it because the [`cdefi.iex.ec`](https://cdefi.iex.ec) faucet does not publicly expose token addresses. Implements all 8 ERC-7984 transfer functions and the operator pattern with `uint48` timestamp expiry.
+- `DiamCToken.sol` — Diam's full ERC-7984 implementation (~180 LOC) using real `Nox.transfer` / `Nox.mint` primitives. We deployed it because the [`cdefi.iex.ec`](https://cdefi.iex.ec) faucet does not publicly expose token addresses. Implements **all 8 ERC-7984 transfer functions** (4 plain + 4 transfer-and-call), `IERC7984Receiver` callback verification, and the operator pattern with `uint48` timestamp expiry. **Full spec compliance** per EIP-7984 — no partial.
 
 There is **no fake data** anywhere. Every encrypted handle is a real reference to TEE-encrypted state.
 

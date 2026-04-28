@@ -6,7 +6,7 @@ import {PrivateOTC} from "../src/PrivateOTC.sol";
 import {IERC7984} from "../src/interfaces/IERC7984.sol";
 
 /// @notice Local-only PrivateOTC tests (no Nox dependency)
-/// @dev MockCToken + Nox-using flows live in PrivateOTC.fork.t.sol — those
+/// @dev DiamCToken + Nox-using flows live in PrivateOTC.fork.t.sol — those
 ///      need `--fork-url $ARBITRUM_SEPOLIA_RPC_URL` since NoxCompute proxy
 ///      only exists on chains 421614/42161/31337-with-deploy.
 contract PrivateOTCTest is Test {

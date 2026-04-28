@@ -3,17 +3,17 @@ pragma solidity ^0.8.27;
 
 import {Script, console} from "forge-std/Script.sol";
 import {PrivateOTC} from "../src/PrivateOTC.sol";
-import {MockCToken} from "../src/mocks/MockCToken.sol";
+import {DiamCToken} from "../src/tokens/DiamCToken.sol";
 
-/// @notice Deploy PrivateOTC + MockCTokens (cUSDC, cETH) to Arbitrum Sepolia.
+/// @notice Deploy PrivateOTC + DiamCTokens (cUSDC, cETH) to Arbitrum Sepolia.
 contract Deploy is Script {
-    function run() external returns (PrivateOTC otc, MockCToken cusdc, MockCToken ceth) {
+    function run() external returns (PrivateOTC otc, DiamCToken cusdc, DiamCToken ceth) {
         uint256 deployerKey = vm.envUint("PRIVATE_KEY");
         vm.startBroadcast(deployerKey);
 
         otc = new PrivateOTC();
-        cusdc = new MockCToken("Confidential USDC", "cUSDC", 6);
-        ceth = new MockCToken("Confidential ETH", "cETH", 18);
+        cusdc = new DiamCToken("Confidential USDC", "cUSDC", 6);
+        ceth = new DiamCToken("Confidential ETH", "cETH", 18);
 
         vm.stopBroadcast();
 

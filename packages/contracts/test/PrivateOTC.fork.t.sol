@@ -3,15 +3,15 @@ pragma solidity ^0.8.27;
 
 import {Test} from "forge-std/Test.sol";
 import {PrivateOTC} from "../src/PrivateOTC.sol";
-import {MockCToken} from "../src/mocks/MockCToken.sol";
+import {DiamCToken} from "../src/tokens/DiamCToken.sol";
 import {IERC7984} from "../src/interfaces/IERC7984.sol";
 
 /// @notice Fork tests against Arbitrum Sepolia where NoxCompute is deployed.
 /// @dev Run: forge test --fork-url $ARBITRUM_SEPOLIA_RPC_URL --match-contract Fork
 contract PrivateOTCForkTest is Test {
     PrivateOTC otc;
-    MockCToken cusdc;
-    MockCToken ceth;
+    DiamCToken cusdc;
+    DiamCToken ceth;
 
     address maker = makeAddr("maker");
     address taker1 = makeAddr("taker1");
@@ -23,11 +23,11 @@ contract PrivateOTCForkTest is Test {
             vm.skip(true);
         }
         otc = new PrivateOTC();
-        cusdc = new MockCToken("Confidential USDC", "cUSDC", 6);
-        ceth = new MockCToken("Confidential ETH", "cETH", 18);
+        cusdc = new DiamCToken("Confidential USDC", "cUSDC", 6);
+        ceth = new DiamCToken("Confidential ETH", "cETH", 18);
     }
 
-    function test_mockTokenMetadata() public view {
+    function test_tokenMetadata() public view {
         assertEq(cusdc.symbol(), "cUSDC");
         assertEq(cusdc.decimals(), 6);
         assertEq(ceth.symbol(), "cETH");
@@ -56,10 +56,5 @@ contract PrivateOTCForkTest is Test {
     function test_initialBalanceIsZero() public view {
         // bytes32(0) is what an uninitialized euint256 unwraps to
         assertEq(cusdc.confidentialBalanceOf(maker), bytes32(0));
-        assertEq(cusdc.confidentialTotalSupply(), euint256ToBytes32(cusdc));
-    }
-
-    function euint256ToBytes32(MockCToken token) internal view returns (bytes32) {
-        return token.confidentialTotalSupply();
     }
 }

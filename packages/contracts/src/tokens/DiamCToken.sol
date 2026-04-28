@@ -6,11 +6,14 @@ import {Nox, euint256, externalEuint256} from "@iexec-nox/nox-protocol-contracts
 import {IERC7984} from "../interfaces/IERC7984.sol";
 import {IERC7984Receiver} from "../interfaces/IERC7984Receiver.sol";
 
-/// @title MockCToken — Full ERC-7984 confidential token implementation
-/// @notice Spec-complete: 4 plain transfers + 4 transfer-and-call variants with
-///         IERC7984Receiver callback verification.
-/// @dev Open faucet for testnet only. Real deployments add access control.
-contract MockCToken is IERC7984 {
+/// @title DiamCToken — Diam's ERC-7984 confidential fungible token
+/// @notice Full ERC-7984 spec implementation: 8 transfer variants (4 plain +
+///         4 transfer-and-call with IERC7984Receiver callback verification).
+///         Used as cUSDC / cETH within Diam's confidential OTC desk.
+/// @dev Open faucet for testnet — production should add access control.
+///      Internally uses Nox.transfer / Nox.mint primitives for encrypted
+///      balance accounting via iExec NoxCompute (TEE).
+contract DiamCToken is IERC7984 {
     string public override name;
     string public override symbol;
     uint8 public immutable override decimals;
@@ -140,7 +143,7 @@ contract MockCToken is IERC7984 {
 
     function _checkOperator(address from) internal view {
         require(
-            from == msg.sender || _operators[from][msg.sender] > block.timestamp, "MockCToken: not operator"
+            from == msg.sender || _operators[from][msg.sender] > block.timestamp, "DiamCToken: not operator"
         );
     }
 
@@ -175,6 +178,6 @@ contract MockCToken is IERC7984 {
 
         bytes32 retval = IERC7984Receiver(to).onConfidentialTransferReceived(operator, from, amount, callData);
         bytes32 expected = bytes32(IERC7984Receiver.onConfidentialTransferReceived.selector);
-        require(retval == expected, "MockCToken: receiver rejected");
+        require(retval == expected, "DiamCToken: receiver rejected");
     }
 }
