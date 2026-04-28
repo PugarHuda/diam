@@ -5,6 +5,10 @@ import { LiveStats } from "@/components/LiveStats";
 import { CopyButton } from "@/components/CopyButton";
 import { CornerBrackets } from "@/components/CornerBrackets";
 import { TerminalCursor } from "@/components/TerminalCursor";
+import {
+  HeroAnnotations,
+  TerminalCardHeader,
+} from "@/components/TerminalAnnotations";
 
 export default function HomePage() {
   return (
@@ -13,12 +17,7 @@ export default function HomePage() {
       <main className="scanline pt-16">
         {/* ── Hero ────────────────────────────────────────────── */}
         <section className="relative flex min-h-[820px] flex-col items-center justify-center overflow-hidden px-6 py-20 text-center">
-          <div className="absolute left-8 top-24 hidden font-mono text-[10px] text-[--color-primary]/30 md:block">
-            [ COORDINATE_AXIS: ARBITRUM_SEPOLIA ]
-          </div>
-          <div className="absolute right-8 top-24 hidden font-mono text-[10px] text-[--color-primary]/30 md:block">
-            [ SYSTEM_STATUS: ENCRYPTED ]
-          </div>
+          <HeroAnnotations />
 
           {/* Decorative scanning beam */}
           <div className="pointer-events-none absolute inset-x-0 top-0 z-0 h-1 bg-gradient-to-b from-[--color-primary]/40 to-transparent scan-beam" />
@@ -39,10 +38,14 @@ export default function HomePage() {
               <TerminalCursor className="ml-2" />
             </h1>
 
+            <p className="mb-6 font-mono text-xs uppercase tracking-[0.25em] text-zinc-600 fade-up fade-up-1">
+              Confidential OTC · Direct + Vickrey RFQ
+            </p>
+
             <p className="mx-auto mb-10 max-w-2xl text-base text-zinc-400 fade-up fade-up-2">
-              Institutional-grade dark pool on iExec Nox. Seal your intent,
-              execute in silence, settle with absolute finality — without
-              revealing a single byte of alpha.
+              Confidential OTC desk on iExec Nox — Direct bilateral or RFQ
+              Vickrey auction with sealed bids. Dark-pool privacy, fully
+              composable with any ERC-20.
             </p>
 
             <div className="flex flex-col justify-center gap-4 sm:flex-row fade-up fade-up-3">
@@ -78,16 +81,7 @@ export default function HomePage() {
 
           {/* Terminal mock card */}
           <div className="glass-card mt-12 w-full max-w-5xl overflow-hidden border-[--color-primary]/20 p-1">
-            <div className="flex items-center justify-between border-b border-zinc-800 bg-zinc-900/40 p-4">
-              <div className="flex gap-2">
-                <div className="h-2 w-2 rounded-full bg-red-500/50" />
-                <div className="h-2 w-2 rounded-full bg-yellow-500/50" />
-                <div className="h-2 w-2 rounded-full bg-green-500/50" />
-              </div>
-              <div className="font-mono text-[10px] text-zinc-500">
-                DIAM_TERMINAL_V1.0 · ARBITRUM_SEPOLIA
-              </div>
-            </div>
+            <TerminalCardHeader />
             <div className="grid grid-cols-1 gap-8 p-8 md:grid-cols-3">
               <TerminalField
                 label="Order Origin"
