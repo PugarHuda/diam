@@ -8,6 +8,7 @@ import { parseUnits } from "viem";
 import { AppShell } from "@/components/AppShell";
 import { PageHeader, SectionHeader } from "@/components/PageHeader";
 import { TokenIcon } from "@/components/TokenIcon";
+import { NftReceipt } from "@/components/NftReceipt";
 import { privateOtcAbi } from "@/lib/abi/privateOtc";
 import { PRIVATE_OTC_ADDRESS, CUSDC_ADDRESS, CETH_ADDRESS } from "@/lib/wagmi";
 import { useAcceptIntent, useCancelIntent } from "@/lib/hooks/useOtcWrites";
@@ -347,6 +348,14 @@ export default function IntentDetailPage({
                 ⟨ INTENT {statusLabel(intent.status).toUpperCase()} ⟩
               </p>
             </div>
+          )}
+
+          {(intent.status === 1 || accept.step === "done") && (
+            <NftReceipt
+              pair={`${TOKEN_NAMES[intent.sellToken.toLowerCase()]?.symbol ?? "?"}/${TOKEN_NAMES[intent.buyToken.toLowerCase()]?.symbol ?? "?"}`}
+              intentId={id}
+              mode="Direct"
+            />
           )}
         </aside>
       </div>

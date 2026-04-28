@@ -261,3 +261,71 @@ Note: amounts are encrypted on-chain via iExec Nox confidential computing.
 Mention compliance posture: event auditable, amounts hidden, no MEV exposure.`,
   });
 }
+
+/* -------------------------------------------------------------------------- */
+/*                              NFT Receipt                                   */
+/* -------------------------------------------------------------------------- */
+
+export interface NftReceipt {
+  /** base64-encoded JPEG data URL */
+  imageDataUrl: string;
+  prompt: string;
+}
+
+/**
+ * Generate an NFT receipt image for a confidential trade.
+ * Endpoint: POST /nft/generate-image (different from /chat/stream)
+ * Returns: { statusCode: 201, data: { type: 'Buffer', data: number[] } }
+ */
+export async function generateNftReceipt(opts: {
+  pair: string;
+  intentId: string;
+  mode: "Direct" | "RFQ";
+}): Promise<NftReceipt> {
+  const prompt = `Abstract minimalist NFT receipt for confidential OTC trade.
+Pair: ${opts.pair}. Intent #${opts.intentId}. Mode: ${opts.mode}.
+Style: matrix green neon encryption keys floating, deep black background,
+geometric ledger glyphs, sealed envelope motif, hexagonal lock pattern,
+cyberpunk institutional finance aesthetic, single-color accent on #00FF41.`;
+
+  const res = await fetch(`${CHAINGPT_BASE_URL}/nft/generate-image`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${getApiKey()}`,
+    },
+    body: JSON.stringify({
+      prompt,
+      model: "velogen",
+      width: 512,
+      height: 512,
+    }),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`NFT generate failed: ${res.status} ${errText.slice(0, 200)}`);
+  }
+
+  const json = (await res.json()) as {
+    statusCode: number;
+    data?: { type: "Buffer"; data: number[] };
+  };
+
+  if (!json.data?.data || !Array.isArray(json.data.data)) {
+    throw new Error("NFT response missing image data");
+  }
+
+  // Convert byte array to base64 → data URL
+  const bytes = new Uint8Array(json.data.data);
+  let binary = "";
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  const base64 = Buffer.from(binary, "binary").toString("base64");
+
+  return {
+    imageDataUrl: `data:image/jpeg;base64,${base64}`,
+    prompt,
+  };
+}

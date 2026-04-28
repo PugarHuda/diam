@@ -7,6 +7,7 @@ import { useAccount, useReadContract, useReadContracts } from "wagmi";
 import { parseUnits } from "viem";
 import { AppShell } from "@/components/AppShell";
 import { PageHeader, SectionHeader } from "@/components/PageHeader";
+import { NftReceipt } from "@/components/NftReceipt";
 import { privateOtcAbi } from "@/lib/abi/privateOtc";
 import { PRIVATE_OTC_ADDRESS, CUSDC_ADDRESS, CETH_ADDRESS } from "@/lib/wagmi";
 import { useSubmitBid, useFinalizeRfq } from "@/lib/hooks/useOtcWrites";
@@ -348,6 +349,14 @@ export default function RfqDetailPage({
                 ⟨ RFQ {statusLabel(rfq.status).toUpperCase()} ⟩
               </p>
             </div>
+          )}
+
+          {(rfq.status === 1 || finalize.step === "done") && (
+            <NftReceipt
+              pair={`${sellSym}/${buyTok?.symbol ?? "?"}`}
+              intentId={id}
+              mode="RFQ"
+            />
           )}
 
           <div className="glass-card border-l-2 border-l-[--color-primary] p-6">
