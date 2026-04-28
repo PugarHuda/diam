@@ -283,3 +283,61 @@ body {
 .slide-down {
   animation: slide-down 200ms ease-out;
 }
+
+/* Terminal cursor blink */
+@keyframes terminal-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+.terminal-blink {
+  animation: terminal-blink 1.1s step-end infinite;
+}
+
+/* Stagger fade-in for elements appearing in sequence */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.fade-up {
+  animation: fade-up 600ms ease-out backwards;
+}
+.fade-up-1 { animation-delay: 80ms; }
+.fade-up-2 { animation-delay: 160ms; }
+.fade-up-3 { animation-delay: 240ms; }
+.fade-up-4 { animation-delay: 320ms; }
+
+/* Subtle scanning beam for hero */
+@keyframes scan-beam {
+  0% { transform: translateY(-100%); opacity: 0; }
+  10% { opacity: 0.6; }
+  90% { opacity: 0.6; }
+  100% { transform: translateY(100%); opacity: 0; }
+}
+.scan-beam {
+  animation: scan-beam 8s ease-in-out infinite;
+}
+
+/* Glow on hover for primary CTAs */
+.glow-on-hover {
+  transition: box-shadow 200ms ease, transform 150ms ease;
+}
+.glow-on-hover:hover {
+  box-shadow: 0 0 30px rgba(0, 255, 65, 0.25);
+  transform: translateY(-1px);
+}
+
+/* Section label styling */
+.section-marker {
+  font-family: var(--font-display);
+  font-size: 0.7rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+  font-weight: 600;
+}

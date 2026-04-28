@@ -2,6 +2,9 @@ import Link from "next/link";
 import type { Route } from "next";
 import { Header } from "@/components/Header";
 import { LiveStats } from "@/components/LiveStats";
+import { CopyButton } from "@/components/CopyButton";
+import { CornerBrackets } from "@/components/CornerBrackets";
+import { TerminalCursor } from "@/components/TerminalCursor";
 
 export default function HomePage() {
   return (
@@ -17,31 +20,40 @@ export default function HomePage() {
             [ SYSTEM_STATUS: ENCRYPTED ]
           </div>
 
+          {/* Decorative scanning beam */}
+          <div className="pointer-events-none absolute inset-x-0 top-0 z-0 h-1 bg-gradient-to-b from-[--color-primary]/40 to-transparent scan-beam" />
+
           <div className="z-10 max-w-4xl">
-            <div className="mb-6 inline-flex items-center gap-2 border border-[--color-primary]/30 bg-[--color-primary]/5 px-3 py-1">
+            <div className="mb-6 inline-flex items-center gap-2 border border-[--color-primary]/30 bg-[--color-primary]/5 px-3 py-1 fade-up">
               <span className="h-2 w-2 bg-[--color-primary] pulse-soft" />
               <span className="text-label-caps text-[10px] text-[--color-primary]">
                 Confidential Layer Active
               </span>
             </div>
 
-            <h1 className="text-headline-xl mb-6 text-white">
+            <h1 className="text-headline-xl mb-6 text-white fade-up fade-up-1">
               Diam: Your trade.{" "}
               <span className="text-[--color-primary]">Their guess.</span>
               <br />
               Nobody knows.
+              <TerminalCursor className="ml-2" />
             </h1>
 
-            <p className="mx-auto mb-10 max-w-2xl text-base text-zinc-400">
+            <p className="mx-auto mb-10 max-w-2xl text-base text-zinc-400 fade-up fade-up-2">
               Institutional-grade dark pool on iExec Nox. Seal your intent,
               execute in silence, settle with absolute finality — without
               revealing a single byte of alpha.
             </p>
 
-            <div className="flex flex-col justify-center gap-4 sm:flex-row">
+            <div className="flex flex-col justify-center gap-4 sm:flex-row fade-up fade-up-3">
               <Link href={"/intents" as Route}>
-                <button className="diam-btn-primary px-8 py-4 text-sm">
-                  Launch App
+                <button className="diam-btn-primary glow-on-hover px-8 py-4 text-sm">
+                  <span className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-base">
+                      play_arrow
+                    </span>
+                    Launch App
+                  </span>
                 </button>
               </Link>
               <a
@@ -50,7 +62,12 @@ export default function HomePage() {
                 rel="noreferrer"
               >
                 <button className="diam-btn-secondary px-8 py-4 text-sm">
-                  View Source
+                  <span className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-base">
+                      code
+                    </span>
+                    View Source
+                  </span>
                 </button>
               </a>
             </div>
@@ -90,6 +107,7 @@ export default function HomePage() {
         {/* ── Why Diam ───────────────────────────────────────── */}
         <section className="mx-auto max-w-[1200px] px-6 py-24">
           <div className="mb-16">
+            <p className="section-marker mb-2">[01] · The problem</p>
             <h2 className="text-headline-lg mb-4 text-white">Why Diam?</h2>
             <div className="h-1 w-16 bg-[--color-primary]" />
           </div>
@@ -132,6 +150,7 @@ export default function HomePage() {
         {/* ── Architecture ───────────────────────────────────── */}
         <section className="bg-zinc-950 px-6 py-24">
           <div className="mx-auto mb-16 max-w-[1200px] text-center">
+            <p className="section-marker mb-2">[02] · How it works</p>
             <h2 className="text-headline-lg mb-4 text-white">
               Architecture of Silence
             </h2>
@@ -174,7 +193,11 @@ export default function HomePage() {
         {/* ── CTA ────────────────────────────────────────────── */}
         <section className="relative overflow-hidden px-6 py-24">
           <div className="absolute inset-0 grid-bg opacity-20" />
+          <div className="mx-auto mb-12 max-w-[1200px] text-center">
+            <p className="section-marker mb-2">[03] · Get started</p>
+          </div>
           <div className="glass-card relative z-10 mx-auto max-w-4xl border-[--color-primary]/20 p-12 text-center md:p-16">
+            <CornerBrackets size="lg" />
             <h2 className="text-headline-xl mb-6 text-white">
               Ready to enter the dark pool?
             </h2>
@@ -183,43 +206,106 @@ export default function HomePage() {
               requirement.
             </p>
             <Link href={"/faucet" as Route}>
-              <button className="diam-btn-primary px-12 py-5 text-base">
-                Establish Secure Connection
+              <button className="diam-btn-primary glow-on-hover px-12 py-5 text-base">
+                <span className="flex items-center justify-center gap-2">
+                  <span className="material-symbols-outlined text-base">
+                    arrow_forward
+                  </span>
+                  Establish Secure Connection
+                </span>
               </button>
             </Link>
           </div>
         </section>
       </main>
 
-      <footer className="mx-auto flex w-full max-w-[1440px] flex-col items-center justify-between border-t border-zinc-900 bg-zinc-950 px-8 py-12 md:flex-row">
-        <div className="mb-4 text-label-caps text-zinc-600 md:mb-0">
-          © 2026 DIAM PROTOCOL · CONFIDENTIAL LAYER ON IEXEC NOX
-        </div>
-        <div className="flex gap-8">
-          <a
-            href="https://github.com/PugarHuda/diam"
-            target="_blank"
-            rel="noreferrer"
-            className="text-label-caps text-zinc-600 transition-colors hover:text-[--color-primary]"
-          >
-            Github
-          </a>
-          <a
-            href="https://docs.iex.ec/nox-protocol/getting-started/welcome"
-            target="_blank"
-            rel="noreferrer"
-            className="text-label-caps text-zinc-600 transition-colors hover:text-[--color-primary]"
-          >
-            Nox Docs
-          </a>
-          <a
-            href="https://sepolia.arbiscan.io/address/0x32C6552b0FB40833568ECb44aF70A44059FE3FF5"
-            target="_blank"
-            rel="noreferrer"
-            className="text-label-caps text-zinc-600 transition-colors hover:text-[--color-primary]"
-          >
-            Contract
-          </a>
+      <footer className="border-t border-zinc-900 bg-zinc-950">
+        <div className="mx-auto max-w-[1440px] px-8 py-12">
+          <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-3">
+            <div>
+              <p className="section-marker mb-3">DEPLOYED ON-CHAIN</p>
+              <div className="space-y-2">
+                <ContractRow
+                  name="PrivateOTC"
+                  address="0x32C6552b0FB40833568ECb44aF70A44059FE3FF5"
+                />
+                <ContractRow
+                  name="cUSDC"
+                  address="0xb0a42fEf01c0B9A2C264024483B6716A5AD6fA04"
+                />
+                <ContractRow
+                  name="cETH"
+                  address="0x6c745b2A55d7e7b48B226a33c65a5912ECC54630"
+                />
+              </div>
+            </div>
+            <div>
+              <p className="section-marker mb-3">RESOURCES</p>
+              <div className="space-y-2 font-mono text-xs">
+                <a
+                  href="https://github.com/PugarHuda/diam"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-1.5 text-zinc-500 transition-colors hover:text-[--color-primary]"
+                >
+                  <span className="material-symbols-outlined text-sm">
+                    code
+                  </span>
+                  GitHub repository
+                </a>
+                <a
+                  href="https://docs.iex.ec/nox-protocol/getting-started/welcome"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-1.5 text-zinc-500 transition-colors hover:text-[--color-primary]"
+                >
+                  <span className="material-symbols-outlined text-sm">
+                    description
+                  </span>
+                  iExec Nox docs
+                </a>
+                <a
+                  href="https://chaingpt.org"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-1.5 text-zinc-500 transition-colors hover:text-[--color-primary]"
+                >
+                  <span className="material-symbols-outlined text-sm">
+                    psychology
+                  </span>
+                  ChainGPT API
+                </a>
+                <a
+                  href="https://dorahacks.io/hackathon/vibe-coding-iexec"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-1.5 text-zinc-500 transition-colors hover:text-[--color-primary]"
+                >
+                  <span className="material-symbols-outlined text-sm">
+                    emoji_events
+                  </span>
+                  Vibe Coding Challenge
+                </a>
+              </div>
+            </div>
+            <div>
+              <p className="section-marker mb-3">SYSTEM</p>
+              <div className="space-y-2 font-mono text-xs text-zinc-500">
+                <p className="flex items-center gap-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-[--color-primary] pulse-soft" />
+                  L3_DEPLOYMENT_ACTIVE
+                </p>
+                <p>NETWORK: ARBITRUM_SEPOLIA</p>
+                <p>NOX_PROXY: 0xd464…c229</p>
+                <p>UPTIME: 99.9999%</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col items-center justify-between border-t border-zinc-900 pt-6 text-label-caps text-zinc-600 md:flex-row">
+            <span>© 2026 DIAM PROTOCOL · CONFIDENTIAL LAYER ON IEXEC NOX</span>
+            <span className="mt-2 md:mt-0">v0.1.0 · BUILT WITH CLAUDE CODE</span>
+          </div>
         </div>
       </footer>
     </>
@@ -227,6 +313,26 @@ export default function HomePage() {
 }
 
 /* ─────────── Sub-components ─────────── */
+
+function ContractRow({ name, address }: { name: string; address: string }) {
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <a
+        href={`https://sepolia.arbiscan.io/address/${address}`}
+        target="_blank"
+        rel="noreferrer"
+        className="flex items-center gap-1.5 font-mono text-xs text-zinc-500 transition-colors hover:text-[--color-primary]"
+      >
+        <span className="material-symbols-outlined text-sm">link</span>
+        {name}
+        <span className="text-zinc-700">
+          {address.slice(0, 6)}…{address.slice(-4)}
+        </span>
+      </a>
+      <CopyButton value={address} />
+    </div>
+  );
+}
 
 function TerminalField({
   label,
