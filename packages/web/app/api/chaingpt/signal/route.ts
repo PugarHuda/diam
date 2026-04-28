@@ -1,20 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auditContract } from "@/lib/chaingpt";
+import { getMarketSignal } from "@/lib/chaingpt";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 30;
 
 export async function POST(req: NextRequest) {
   try {
-    const { code } = (await req.json()) as { code?: string };
-    if (!code || typeof code !== "string") {
+    const { pair } = (await req.json()) as { pair?: string };
+    if (!pair) {
       return NextResponse.json(
-        { error: "code (string) required in body" },
+        { error: "pair (e.g. 'cETH/cUSDC') required" },
         { status: 400 },
       );
     }
-    const report = await auditContract(code);
-    return NextResponse.json(report);
+    const signal = await getMarketSignal(pair);
+    return NextResponse.json(signal);
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : String(err) },

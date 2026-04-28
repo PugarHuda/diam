@@ -1,45 +1,50 @@
 /**
- * ChainGPT API client — auditor + price advisor + report generator.
+ * ChainGPT API client — auditor, price advisor, compliance, market signals.
  *
- * Uses raw fetch instead of @chaingpt/generalchat or @chaingpt/smartcontractauditor
- * SDKs to keep bundles edge-runtime compatible. SDK packages exist if you prefer:
- *   - @chaingpt/generalchat (Web3 LLM)
- *   - @chaingpt/smartcontractauditor (audit)
+ * API requires `model` field. Available models verified via API:
+ *   general_assistant, smart_contract_generator, smart_contract_auditor,
+ *   AI_trading_assistant, ask_crypto, NFT_generator, trading_advisor,
+ *   compliance_bot, in_depth_audit, ai_signal_watchlist, generalchat,
+ *   multi_agent, langchain, smt, custom, llama2, general_assistant_falcon
  *
- * Setup: get API key from https://app.chaingpt.org (free hackathon credits via
- * Telegram @vladnazarxyz per iExec brief).
+ * Endpoint: POST https://api.chaingpt.org/chat/stream
+ * Auth: Authorization: Bearer <CHAINGPT_API_KEY>
+ * Free hackathon credits via Telegram @vladnazarxyz
  */
 
 const CHAINGPT_BASE_URL = "https://api.chaingpt.org";
 
+export type ChainGPTModel =
+  | "general_assistant"
+  | "smart_contract_generator"
+  | "smart_contract_auditor"
+  | "AI_trading_assistant"
+  | "ask_crypto"
+  | "trading_advisor"
+  | "compliance_bot"
+  | "in_depth_audit"
+  | "ai_signal_watchlist";
+
 function getApiKey(): string {
   const key = process.env.CHAINGPT_API_KEY;
-  if (!key) {
-    throw new Error("CHAINGPT_API_KEY not set in environment");
-  }
+  if (!key) throw new Error("CHAINGPT_API_KEY not set in environment");
   return key;
 }
 
 /* -------------------------------------------------------------------------- */
-/*                                  Web3 LLM                                  */
+/*                              Low-level call                                */
 /* -------------------------------------------------------------------------- */
 
 export interface ChatRequest {
+  model: ChainGPTModel;
   question: string;
-  chatHistory?: "on" | "off";
-  contextInjection?: {
-    enabled: boolean;
-    contextContent?: string;
-  };
 }
 
-export interface ChatResponse {
-  data: {
-    bot: string;
-  };
-}
-
-/** Send a question to ChainGPT Web3 LLM. Returns raw answer text. */
+/**
+ * Send question to ChainGPT and return raw text response.
+ * Streaming endpoint returns either plain text (auditor, advisor) or
+ * JSON-fenced markdown (general_assistant). Caller handles parsing.
+ */
 export async function askChainGPT(req: ChatRequest): Promise<string> {
   const res = await fetch(`${CHAINGPT_BASE_URL}/chat/stream`, {
     method: "POST",
@@ -48,25 +53,19 @@ export async function askChainGPT(req: ChatRequest): Promise<string> {
       Authorization: `Bearer ${getApiKey()}`,
     },
     body: JSON.stringify({
+      model: req.model,
       question: req.question,
-      chatHistory: req.chatHistory ?? "off",
-      ...(req.contextInjection && { contextInjection: req.contextInjection }),
+      chatHistory: "off",
     }),
   });
 
+  const text = await res.text();
+
   if (!res.ok) {
-    throw new Error(`ChainGPT chat failed: ${res.status} ${await res.text()}`);
+    throw new Error(`ChainGPT ${res.status}: ${text.slice(0, 200)}`);
   }
 
-  // ChainGPT streams responses as SSE. For non-streaming consumers, accumulate.
-  const text = await res.text();
-  // Best-effort parse: try JSON first, fall back to raw text
-  try {
-    const json = JSON.parse(text) as ChatResponse;
-    return json.data?.bot ?? text;
-  } catch {
-    return text;
-  }
+  return text;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -75,39 +74,38 @@ export async function askChainGPT(req: ChatRequest): Promise<string> {
 
 export interface AuditReport {
   riskLevel: "low" | "medium" | "high";
-  findings: string[];
-  recommendations: string[];
   raw: string;
+  findings: string[];
 }
 
 /**
- * Audit a Solidity snippet via ChainGPT Smart Contract Auditor.
- * Auditor returns natural-language analysis; we extract structure heuristically.
+ * Audit a Solidity snippet. Returns markdown-formatted audit + heuristic
+ * risk classification.
  */
 export async function auditContract(solidityCode: string): Promise<AuditReport> {
-  const prompt = `Audit the following Solidity contract for security issues, gas inefficiencies, and best-practice violations. Return findings as a numbered list, then recommendations as another numbered list.\n\n${solidityCode}`;
-
   const raw = await askChainGPT({
-    question: prompt,
-    chatHistory: "off",
+    model: "smart_contract_auditor",
+    question: `Audit this Solidity contract for security issues, gas inefficiencies, and best-practice violations:\n\n${solidityCode}`,
   });
 
-  // Heuristic parse — auditor returns prose
+  // Extract numbered findings from markdown sections like "1. **Issue**:"
+  const findingMatches = raw.matchAll(/^\s*\d+\.\s+\*\*([^*]+)\*\*/gm);
+  const findings = Array.from(findingMatches, (m) => m[1].trim());
+
   const lower = raw.toLowerCase();
   const riskLevel: AuditReport["riskLevel"] = lower.includes("critical")
     ? "high"
-    : lower.includes("warning") || lower.includes("medium")
+    : lower.includes("warning") ||
+        lower.includes("vulnerab") ||
+        findings.length >= 3
       ? "medium"
       : "low";
 
-  const findings = extractList(raw, /finding|issue|vulnerab/i);
-  const recommendations = extractList(raw, /recommend|suggest|fix/i);
-
-  return { riskLevel, findings, recommendations, raw };
+  return { riskLevel, raw, findings };
 }
 
 /* -------------------------------------------------------------------------- */
-/*                              Price Sanity Check                            */
+/*                              Fair Price Advisor                            */
 /* -------------------------------------------------------------------------- */
 
 export interface PriceCheck {
@@ -120,52 +118,119 @@ export interface PriceCheck {
 }
 
 /**
- * Sanity-check trade pricing using ChainGPT's on-chain market awareness.
+ * Sanity-check trade pricing using ChainGPT's market awareness.
  *
- * @param pair        Asset pair, e.g. "ETH/USDC"
- * @param yourPriceUsd Your intended unit price in USD
+ * Real ChainGPT response shape:
+ *   ```json
+ *   {"fairPriceUsd": 2300.18, "rationale": "Current market price..."}
+ *   ```
+ * Returned wrapped in markdown code fence — must strip.
  */
 export async function checkFairPrice(
   pair: string,
-  yourPriceUsd: number
+  yourPriceUsd: number,
 ): Promise<PriceCheck> {
-  const question = `What is the current fair market price for ${pair}? My intended trade price is $${yourPriceUsd}. Is this reasonable? Reply ONLY with strict JSON: {"fairPriceUsd": number, "rationale": string}`;
+  const raw = await askChainGPT({
+    model: "general_assistant",
+    question: `What is the current fair market price (USD) for ${pair}? My intended trade price is $${yourPriceUsd}. Reply ONLY strict JSON, no markdown: {"fairPriceUsd": number, "rationale": "short explanation"}`,
+  });
 
-  const raw = await askChainGPT({ question, chatHistory: "off" });
-
-  // Try to parse JSON from response
   let fairPriceUsd = yourPriceUsd;
-  let rationale = "ChainGPT response parse failed";
+  let rationale = "ChainGPT response could not be parsed";
   try {
-    const match = raw.match(/\{[\s\S]*\}/);
+    const cleaned = raw
+      .replace(/```json\s*/gi, "")
+      .replace(/```\s*$/g, "")
+      .trim();
+    const match = cleaned.match(/\{[\s\S]*?\}/);
     if (match) {
       const parsed = JSON.parse(match[0]) as {
         fairPriceUsd: number;
         rationale: string;
       };
-      fairPriceUsd = parsed.fairPriceUsd;
-      rationale = parsed.rationale;
+      if (typeof parsed.fairPriceUsd === "number") {
+        fairPriceUsd = parsed.fairPriceUsd;
+      }
+      if (parsed.rationale) rationale = parsed.rationale;
     }
   } catch {
     // Fall through with defaults
   }
 
-  const deltaBps = Math.round(
-    ((yourPriceUsd - fairPriceUsd) / fairPriceUsd) * 10000
-  );
+  const deltaBps =
+    fairPriceUsd > 0
+      ? Math.round(((yourPriceUsd - fairPriceUsd) / fairPriceUsd) * 10000)
+      : 0;
   const warning =
     Math.abs(deltaBps) > 500
       ? `Your price is ${(deltaBps / 100).toFixed(1)}% off market — confirm intent`
       : undefined;
 
-  return {
-    pair,
-    fairPriceUsd,
-    yourPriceUsd,
-    deltaBps,
-    warning,
-    rationale,
-  };
+  return { pair, fairPriceUsd, yourPriceUsd, deltaBps, warning, rationale };
+}
+
+/* -------------------------------------------------------------------------- */
+/*                        AI Trading Insights (market signal)                 */
+/* -------------------------------------------------------------------------- */
+
+export interface MarketSignal {
+  pair: string;
+  bias: "bullish" | "bearish" | "neutral";
+  confidence: "low" | "medium" | "high";
+  rationale: string;
+}
+
+export async function getMarketSignal(pair: string): Promise<MarketSignal> {
+  const raw = await askChainGPT({
+    model: "general_assistant",
+    question: `Provide a 24h trading bias for ${pair}. Reply ONLY strict JSON, no markdown: {"bias":"bullish|bearish|neutral","confidence":"low|medium|high","rationale":"1-sentence reason"}`,
+  });
+
+  let bias: MarketSignal["bias"] = "neutral";
+  let confidence: MarketSignal["confidence"] = "low";
+  let rationale = "ChainGPT response could not be parsed";
+
+  try {
+    const cleaned = raw
+      .replace(/```json\s*/gi, "")
+      .replace(/```\s*$/g, "")
+      .trim();
+    const match = cleaned.match(/\{[\s\S]*?\}/);
+    if (match) {
+      const parsed = JSON.parse(match[0]) as Partial<MarketSignal>;
+      if (parsed.bias) bias = parsed.bias;
+      if (parsed.confidence) confidence = parsed.confidence;
+      if (parsed.rationale) rationale = parsed.rationale;
+    }
+  } catch {
+    /* fallthrough */
+  }
+
+  return { pair, bias, confidence, rationale };
+}
+
+/* -------------------------------------------------------------------------- */
+/*                            Compliance Check                                */
+/* -------------------------------------------------------------------------- */
+
+export interface ComplianceReport {
+  flags: string[];
+  raw: string;
+}
+
+export async function checkCompliance(
+  pair: string,
+  jurisdiction: string,
+): Promise<ComplianceReport> {
+  const raw = await askChainGPT({
+    model: "general_assistant",
+    question: `Brief compliance overview for confidential OTC trade of ${pair} in ${jurisdiction}. List any regulatory flags (KYC, AML, securities) as numbered points. 3-4 sentences max.`,
+  });
+
+  const flagMatches = raw.matchAll(/^\s*\d+\.\s+\*\*?([^*\n]+)\*?\*?/gm);
+  const flags = Array.from(flagMatches, (m) => m[1].trim()).slice(0, 5);
+
+  return { flags, raw };
 }
 
 /* -------------------------------------------------------------------------- */
@@ -180,14 +245,12 @@ export interface SettlementContext {
   timestamp: number;
 }
 
-/**
- * Generate human-readable settlement report for auditor view.
- * Encrypted amounts stay encrypted — report describes what was on-chain only.
- */
 export async function generateSettlementReport(
-  ctx: SettlementContext
+  ctx: SettlementContext,
 ): Promise<string> {
-  const question = `Write a 3-sentence audit-friendly report of this confidential OTC settlement:
+  return askChainGPT({
+    model: "general_assistant",
+    question: `Write a 3-sentence audit-friendly report of this confidential OTC settlement:
 - Transaction: ${ctx.txHash}
 - Asset pair: ${ctx.pair}
 - Maker: ${ctx.maker}
@@ -195,30 +258,6 @@ export async function generateSettlementReport(
 - Time (unix): ${ctx.timestamp}
 
 Note: amounts are encrypted on-chain via iExec Nox confidential computing.
-Report should mention compliance posture (event auditable, amounts hidden, no MEV exposure).`;
-
-  return askChainGPT({ question, chatHistory: "off" });
-}
-
-/* -------------------------------------------------------------------------- */
-/*                                  Helpers                                   */
-/* -------------------------------------------------------------------------- */
-
-function extractList(text: string, marker: RegExp): string[] {
-  const lines = text.split("\n");
-  const out: string[] = [];
-  let inSection = false;
-  for (const line of lines) {
-    if (marker.test(line)) {
-      inSection = true;
-      continue;
-    }
-    if (inSection && /^\d+[\).]\s+/.test(line.trim())) {
-      out.push(line.replace(/^\d+[\).]\s+/, "").trim());
-    } else if (inSection && line.trim() === "") {
-      // section break
-      if (out.length > 0) inSection = false;
-    }
-  }
-  return out;
+Mention compliance posture: event auditable, amounts hidden, no MEV exposure.`,
+  });
 }

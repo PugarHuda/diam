@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Route } from "next";
 import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/PageHeader";
+import { AuditButton } from "@/components/AuditButton";
 
 export default function CreatePage() {
   return (
@@ -40,7 +41,11 @@ export default function CreatePage() {
         />
       </div>
 
-      <div className="mt-12 flex items-start gap-3 border border-zinc-800 bg-zinc-900/30 p-6">
+      <div className="mt-8">
+        <AuditButton />
+      </div>
+
+      <div className="mt-6 flex items-start gap-3 border border-zinc-800 bg-zinc-900/30 p-6">
         <span
           className="material-symbols-outlined text-[--color-primary]"
           style={{ fontVariationSettings: "'FILL' 1" }}

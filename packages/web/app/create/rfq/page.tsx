@@ -6,6 +6,7 @@ import type { Route } from "next";
 import { parseUnits } from "viem";
 import { AppShell } from "@/components/AppShell";
 import { PageHeader, SectionHeader } from "@/components/PageHeader";
+import { MarketSignal } from "@/components/MarketSignal";
 import { useCreateRfq } from "@/lib/hooks/useOtcWrites";
 import { CUSDC_ADDRESS, CETH_ADDRESS } from "@/lib/wagmi";
 
@@ -230,6 +231,8 @@ export default function RfqCreatePage() {
         </section>
 
         <aside className="col-span-12 space-y-4 lg:col-span-5">
+          <MarketSignal pair={`${sellTok.symbol}/${buyTok.symbol}`} />
+
           <div className="glass-card border-l-2 border-l-[--color-primary] p-6">
             <div className="mb-3 flex items-center gap-3">
               <span
