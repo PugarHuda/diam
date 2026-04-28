@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Route } from "next";
 import { Header } from "@/components/Header";
+import { LiveStats } from "@/components/LiveStats";
 
 export default function HomePage() {
   return (
@@ -55,8 +56,11 @@ export default function HomePage() {
             </div>
           </div>
 
+          {/* Live on-chain stats */}
+          <LiveStats />
+
           {/* Terminal mock card */}
-          <div className="glass-card mt-20 w-full max-w-5xl overflow-hidden border-[--color-primary]/20 p-1">
+          <div className="glass-card mt-12 w-full max-w-5xl overflow-hidden border-[--color-primary]/20 p-1">
             <div className="flex items-center justify-between border-b border-zinc-800 bg-zinc-900/40 p-4">
               <div className="flex gap-2">
                 <div className="h-2 w-2 rounded-full bg-red-500/50" />

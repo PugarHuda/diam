@@ -8,6 +8,7 @@ import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { TokenIcon } from "@/components/TokenIcon";
+import { Skeleton } from "@/components/Skeleton";
 import { useNoxClient, decryptUint256 } from "@/lib/nox-client";
 import { CUSDC_ADDRESS, CETH_ADDRESS } from "@/lib/wagmi";
 import { shortAddress } from "@/lib/utils";
@@ -169,14 +170,16 @@ function BalanceRow({
         <TokenIcon symbol={token.symbol} size="md" />
         <div>
           <p className="font-display text-sm font-bold">{token.symbol}</p>
-          <p className="flex items-center gap-1 font-mono text-[11px] text-zinc-600">
-            <span className="material-symbols-outlined text-xs text-[--color-primary]/40">
-              lock
-            </span>
-            {handleQuery.data
-              ? `${(handleQuery.data as string).slice(0, 14)}…`
-              : "loading…"}
-          </p>
+          {handleQuery.data ? (
+            <p className="flex items-center gap-1 font-mono text-[11px] text-zinc-600">
+              <span className="material-symbols-outlined text-xs text-[--color-primary]/40">
+                lock
+              </span>
+              {(handleQuery.data as string).slice(0, 14)}…
+            </p>
+          ) : (
+            <Skeleton className="mt-1 h-3 w-32" />
+          )}
         </div>
       </div>
 

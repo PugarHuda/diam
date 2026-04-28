@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import type { Route } from "next";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { NetworkBadge } from "./NetworkBadge";
+import { MobileMenu } from "./MobileMenu";
 
 const NAV: { href: Route; label: string; icon: string }[] = [
   { href: "/intents", label: "Trade", icon: "swap_horiz" },
@@ -68,6 +69,7 @@ export function Header() {
             showBalance={false}
           />
         </div>
+        <MobileMenu />
       </div>
     </nav>
   );

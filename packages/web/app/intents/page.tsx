@@ -6,6 +6,7 @@ import { AppShell } from "@/components/AppShell";
 import { PageHeader, SectionHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { TokenIcon } from "@/components/TokenIcon";
+import { SkeletonRow } from "@/components/Skeleton";
 import { useIntents, statusLabel, modeLabel } from "@/lib/hooks/useIntents";
 import { shortAddress } from "@/lib/utils";
 import { CUSDC_ADDRESS, CETH_ADDRESS } from "@/lib/wagmi";
@@ -35,11 +36,22 @@ export default function IntentsPage() {
       />
 
       {isLoading && (
-        <div className="flex items-center justify-center gap-2 py-12 font-mono text-sm text-zinc-500">
-          <span className="material-symbols-outlined animate-spin text-base">
-            sync
-          </span>
-          FETCHING ON-CHAIN INTENTS
+        <div className="glass-card overflow-hidden">
+          <div className="flex items-center justify-between border-b border-zinc-800 p-6">
+            <div className="flex items-center gap-2 font-mono text-xs text-zinc-500">
+              <span className="material-symbols-outlined animate-spin text-base text-[--color-primary]">
+                sync
+              </span>
+              FETCHING ON-CHAIN INTENTS
+            </div>
+          </div>
+          <table className="w-full">
+            <tbody className="divide-y divide-zinc-800/50">
+              <SkeletonRow />
+              <SkeletonRow />
+              <SkeletonRow />
+            </tbody>
+          </table>
         </div>
       )}
 

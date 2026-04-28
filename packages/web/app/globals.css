@@ -249,3 +249,37 @@ body {
 .pulse-soft {
   animation: pulse-soft 2s ease-in-out infinite;
 }
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+
+@keyframes count-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.count-enter {
+  animation: count-fade-in 600ms ease-out;
+}
+
+/* Mobile slide-down nav drawer */
+@keyframes slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.slide-down {
+  animation: slide-down 200ms ease-out;
+}
