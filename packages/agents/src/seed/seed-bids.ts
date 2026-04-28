@@ -23,8 +23,8 @@ import { arbitrumSepolia } from "viem/chains";
 import { createViemHandleClient } from "@iexec-nox/handle";
 
 const ADDRESSES = {
-  privateOtc: "0x32C6552b0FB40833568ECb44aF70A44059FE3FF5" as `0x${string}`,
-  cusdc: "0xb0a42fEf01c0B9A2C264024483B6716A5AD6fA04" as `0x${string}`,
+  privateOtc: "0x5b2C0c83e41bF9ef072d742096C49DFDB814CEB4" as `0x${string}`,
+  cusdc: "0x57736B816F6cb53c6B2c742D3A162E89Db162ADE" as `0x${string}`,
 };
 
 const otcAbi = parseAbi([
@@ -57,16 +57,15 @@ async function main() {
   });
 
   // Bid plan — varied amounts so Vickrey winner is interesting
+  // After fresh deploy, RFQ ids: deployer's = #2, Carol's = #5
   const bids: BidPlan[] = [
-    // RFQ #5 (deployer's RFQ: 2 cETH for cUSDC, 6h window)
-    { rfqId: 5n, bidder: "Alice", bidderKey: seedKey("alice"), amount: parseUnits("6000", 6) },
-    { rfqId: 5n, bidder: "Bob", bidderKey: seedKey("bob"), amount: parseUnits("6500", 6) },
-    { rfqId: 5n, bidder: "Carol", bidderKey: seedKey("carol"), amount: parseUnits("6300", 6) },
+    // RFQ #2 (deployer's RFQ: 2 cETH for cUSDC, 6h window)
+    { rfqId: 2n, bidder: "Alice", bidderKey: seedKey("alice"), amount: parseUnits("6000", 6) },
+    { rfqId: 2n, bidder: "Bob", bidderKey: seedKey("bob"), amount: parseUnits("6500", 6) },
+    { rfqId: 2n, bidder: "Carol", bidderKey: seedKey("carol"), amount: parseUnits("6300", 6) },
 
-    // RFQ #8 (Carol's RFQ: 1 cETH for cUSDC, 4h window)
-    { rfqId: 8n, bidder: "Alice", bidderKey: seedKey("alice"), amount: parseUnits("3100", 6) },
-    { rfqId: 8n, bidder: "Bob", bidderKey: seedKey("bob"), amount: parseUnits("3050", 6) },
-    { rfqId: 8n, bidder: "Deployer", bidderKey: adminKey as `0x${string}`, amount: parseUnits("3200", 6) },
+    // RFQ #5 (Carol's RFQ: 1 cETH for cUSDC, 4h window) — only need 1 more (Alice + Bob already bid in earlier run)
+    { rfqId: 5n, bidder: "Deployer", bidderKey: adminKey as `0x${string}`, amount: parseUnits("3200", 6) },
   ];
 
   for (const plan of bids) {

@@ -29,9 +29,9 @@ import { arbitrumSepolia } from "viem/chains";
 import { createViemHandleClient } from "@iexec-nox/handle";
 
 const ADDRESSES = {
-  privateOtc: "0x32C6552b0FB40833568ECb44aF70A44059FE3FF5" as `0x${string}`,
-  cusdc: "0xb0a42fEf01c0B9A2C264024483B6716A5AD6fA04" as `0x${string}`,
-  ceth: "0x6c745b2A55d7e7b48B226a33c65a5912ECC54630" as `0x${string}`,
+  privateOtc: "0x5b2C0c83e41bF9ef072d742096C49DFDB814CEB4" as `0x${string}`,
+  cusdc: "0x57736B816F6cb53c6B2c742D3A162E89Db162ADE" as `0x${string}`,
+  ceth: "0xCdD84bA9415DFE3Dd5c0c05077B1FE194Bcf695d" as `0x${string}`,
 };
 
 const cTokenAbi = parseAbi([

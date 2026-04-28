@@ -2,7 +2,7 @@
 pragma solidity ^0.8.27;
 
 /// @title IERC7984 — Confidential Fungible Token
-/// @notice Minimal interface untuk consume ERC-7984 confidential tokens
+/// @notice Full ERC-7984 interface — all 8 transfer variants (4 plain + 4 with-call).
 /// @dev Spec: https://eips.ethereum.org/EIPS/eip-7984
 interface IERC7984 {
     event ConfidentialTransfer(address indexed from, address indexed to, bytes32 indexed amount);
@@ -20,6 +20,8 @@ interface IERC7984 {
 
     function setOperator(address operator, uint48 until) external;
 
+    /* ─────────── Plain transfers (4 variants) ─────────── */
+
     function confidentialTransfer(address to, bytes32 amount) external returns (bytes32);
 
     function confidentialTransfer(address to, bytes32 amount, bytes calldata data) external returns (bytes32);
@@ -30,11 +32,28 @@ interface IERC7984 {
         external
         returns (bytes32);
 
+    /* ─────────── Transfer-and-call variants (4 variants) ─────────── */
+
     function confidentialTransferAndCall(address to, bytes32 amount, bytes calldata callData)
         external
         returns (bytes32);
 
+    function confidentialTransferAndCall(
+        address to,
+        bytes32 amount,
+        bytes calldata data,
+        bytes calldata callData
+    ) external returns (bytes32);
+
     function confidentialTransferFromAndCall(address from, address to, bytes32 amount, bytes calldata callData)
         external
         returns (bytes32);
+
+    function confidentialTransferFromAndCall(
+        address from,
+        address to,
+        bytes32 amount,
+        bytes calldata data,
+        bytes calldata callData
+    ) external returns (bytes32);
 }

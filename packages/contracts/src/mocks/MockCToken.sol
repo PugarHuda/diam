@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import {Nox, euint256, externalEuint256, ebool} from "@iexec-nox/nox-protocol-contracts/contracts/sdk/Nox.sol";
+import {Nox, euint256, externalEuint256} from "@iexec-nox/nox-protocol-contracts/contracts/sdk/Nox.sol";
 
 import {IERC7984} from "../interfaces/IERC7984.sol";
+import {IERC7984Receiver} from "../interfaces/IERC7984Receiver.sol";
 
-/// @title MockCToken — Minimal ERC-7984 confidential token for testing
-/// @notice Open faucet on testnet. Real productions should add access control.
-/// @dev Uses Nox primitives directly (transfer/mint/burn) for encrypted accounting.
+/// @title MockCToken — Full ERC-7984 confidential token implementation
+/// @notice Spec-complete: 4 plain transfers + 4 transfer-and-call variants with
+///         IERC7984Receiver callback verification.
+/// @dev Open faucet for testnet only. Real deployments add access control.
 contract MockCToken is IERC7984 {
     string public override name;
     string public override symbol;
@@ -40,6 +42,8 @@ contract MockCToken is IERC7984 {
         Nox.allowThis(newSupply);
     }
 
+    /* ─────────── ERC-7984 view ─────────── */
+
     function confidentialTotalSupply() external view override returns (bytes32) {
         return euint256.unwrap(_totalSupply);
     }
@@ -56,6 +60,8 @@ contract MockCToken is IERC7984 {
         _operators[msg.sender][operator] = until;
         emit OperatorSet(msg.sender, operator, until);
     }
+
+    /* ─────────── Plain transfers (4 variants) ─────────── */
 
     function confidentialTransfer(address to, bytes32 amount) external override returns (bytes32) {
         return _doTransfer(msg.sender, to, amount);
@@ -83,18 +89,54 @@ contract MockCToken is IERC7984 {
         return _doTransfer(from, to, amount);
     }
 
-    function confidentialTransferAndCall(address, bytes32, bytes calldata) external pure override returns (bytes32) {
-        revert("MockCToken: callbacks not implemented");
-    }
+    /* ─────────── Transfer-and-call variants (4 variants) ─────────── */
 
-    function confidentialTransferFromAndCall(address, address, bytes32, bytes calldata)
+    function confidentialTransferAndCall(address to, bytes32 amount, bytes calldata callData)
         external
-        pure
         override
         returns (bytes32)
     {
-        revert("MockCToken: callbacks not implemented");
+        bytes32 result = _doTransfer(msg.sender, to, amount);
+        _checkReceiver(msg.sender, msg.sender, to, amount, callData);
+        return result;
     }
+
+    function confidentialTransferAndCall(
+        address to,
+        bytes32 amount,
+        bytes calldata,
+        bytes calldata callData
+    ) external override returns (bytes32) {
+        bytes32 result = _doTransfer(msg.sender, to, amount);
+        _checkReceiver(msg.sender, msg.sender, to, amount, callData);
+        return result;
+    }
+
+    function confidentialTransferFromAndCall(address from, address to, bytes32 amount, bytes calldata callData)
+        external
+        override
+        returns (bytes32)
+    {
+        _checkOperator(from);
+        bytes32 result = _doTransfer(from, to, amount);
+        _checkReceiver(msg.sender, from, to, amount, callData);
+        return result;
+    }
+
+    function confidentialTransferFromAndCall(
+        address from,
+        address to,
+        bytes32 amount,
+        bytes calldata,
+        bytes calldata callData
+    ) external override returns (bytes32) {
+        _checkOperator(from);
+        bytes32 result = _doTransfer(from, to, amount);
+        _checkReceiver(msg.sender, from, to, amount, callData);
+        return result;
+    }
+
+    /* ─────────── Internal ─────────── */
 
     function _checkOperator(address from) internal view {
         require(
@@ -117,5 +159,22 @@ contract MockCToken is IERC7984 {
 
         emit ConfidentialTransfer(from, to, amount);
         return amount;
+    }
+
+    /// @dev Per ERC-7984 spec, receiver contracts must return the function
+    ///      selector (left-padded to bytes32) to acknowledge receipt. EOAs are
+    ///      skipped (no callback).
+    function _checkReceiver(
+        address operator,
+        address from,
+        address to,
+        bytes32 amount,
+        bytes calldata callData
+    ) internal {
+        if (to.code.length == 0) return;
+
+        bytes32 retval = IERC7984Receiver(to).onConfidentialTransferReceived(operator, from, amount, callData);
+        bytes32 expected = bytes32(IERC7984Receiver.onConfidentialTransferReceived.selector);
+        require(retval == expected, "MockCToken: receiver rejected");
     }
 }

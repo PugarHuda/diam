@@ -163,9 +163,9 @@ The transaction shows up on Etherscan — but the amount is a 32-byte handle, no
 
 | Contract | Address |
 |---|---|
-| `PrivateOTC` (the Diam orchestrator) | [`0x32C6552b0FB40833568ECb44aF70A44059FE3FF5`](https://sepolia.arbiscan.io/address/0x32C6552b0FB40833568ECb44aF70A44059FE3FF5) |
-| `cUSDC` (mock ERC-7984) | [`0xb0a42fEf01c0B9A2C264024483B6716A5AD6fA04`](https://sepolia.arbiscan.io/address/0xb0a42fEf01c0B9A2C264024483B6716A5AD6fA04) |
-| `cETH` (mock ERC-7984) | [`0x6c745b2A55d7e7b48B226a33c65a5912ECC54630`](https://sepolia.arbiscan.io/address/0x6c745b2A55d7e7b48B226a33c65a5912ECC54630) |
+| `PrivateOTC` (the Diam orchestrator) | [`0x5b2C0c83e41bF9ef072d742096C49DFDB814CEB4`](https://sepolia.arbiscan.io/address/0x5b2C0c83e41bF9ef072d742096C49DFDB814CEB4) |
+| `cUSDC` (mock ERC-7984) | [`0x57736B816F6cb53c6B2c742D3A162E89Db162ADE`](https://sepolia.arbiscan.io/address/0x57736B816F6cb53c6B2c742D3A162E89Db162ADE) |
+| `cETH` (mock ERC-7984) | [`0xCdD84bA9415DFE3Dd5c0c05077B1FE194Bcf695d`](https://sepolia.arbiscan.io/address/0xCdD84bA9415DFE3Dd5c0c05077B1FE194Bcf695d) |
 
 **NoxCompute proxy** (provided by iExec): [`0xd464B198f06756a1d00be223634b85E0a731c229`](https://sepolia.arbiscan.io/address/0xd464B198f06756a1d00be223634b85E0a731c229)
 

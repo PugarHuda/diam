@@ -181,7 +181,7 @@ export default function HomePage() {
 
           <div className="mx-auto mt-8 flex max-w-[1200px] flex-wrap justify-between gap-3 px-4 font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-700">
             <a
-              href="https://sepolia.arbiscan.io/address/0x32C6552b0FB40833568ECb44aF70A44059FE3FF5"
+              href="https://sepolia.arbiscan.io/address/0x5b2C0c83e41bF9ef072d742096C49DFDB814CEB4"
               target="_blank"
               rel="noreferrer"
               className="transition-colors hover:text-[--color-primary]"
@@ -247,15 +247,15 @@ export default function HomePage() {
               <div className="space-y-2">
                 <ContractRow
                   name="PrivateOTC"
-                  address="0x32C6552b0FB40833568ECb44aF70A44059FE3FF5"
+                  address="0x5b2C0c83e41bF9ef072d742096C49DFDB814CEB4"
                 />
                 <ContractRow
                   name="cUSDC"
-                  address="0xb0a42fEf01c0B9A2C264024483B6716A5AD6fA04"
+                  address="0x57736B816F6cb53c6B2c742D3A162E89Db162ADE"
                 />
                 <ContractRow
                   name="cETH"
-                  address="0x6c745b2A55d7e7b48B226a33c65a5912ECC54630"
+                  address="0xCdD84bA9415DFE3Dd5c0c05077B1FE194Bcf695d"
                 />
               </div>
             </div>
