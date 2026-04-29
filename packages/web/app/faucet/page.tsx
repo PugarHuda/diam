@@ -47,7 +47,7 @@ export default function FaucetPage() {
       <PageHeader
         icon="water_drop"
         title="FAUCET"
-        subtitle="MOCK_ERC7984_DISPENSER | TESTNET_ONLY"
+        subtitle="CONFIDENTIAL_TOKEN_DISPENSER | TESTNET_ONLY"
       />
 
       {!isConnected && (
@@ -211,10 +211,10 @@ export default function FaucetPage() {
             <div className="glass-card p-4">
               <p className="text-label-caps mb-2 flex items-center gap-1.5 text-zinc-500">
                 ERC-7984
-                <HelpHint content="ERC-7984 is the Confidential Fungible Token standard. Balances and amounts are stored as encrypted bytes32 handles, not plaintext. Diam's MockCToken implements full spec: 8 transfer functions, operator pattern, ACL via Nox primitives." />
+                <HelpHint content="ERC-7984 is the Confidential Fungible Token standard. Balances and amounts are stored as encrypted bytes32 handles, not plaintext. Diam's DiamCToken implements full spec: 8 transfer functions, operator pattern, ACL via Nox primitives." />
               </p>
               <p className="font-mono text-[11px] leading-relaxed text-zinc-400">
-                MockCToken is a real ERC-7984 implementation (~150 LOC) using
+                DiamCToken is a real ERC-7984 implementation (~150 LOC) using
                 Nox.transfer + Nox.mint primitives directly. Open faucet for
                 testnet only — production tokens would use access control.
               </p>

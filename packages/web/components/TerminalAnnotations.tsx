@@ -48,7 +48,7 @@ export function HeroAnnotations() {
 }
 
 /**
- * Live terminal mock card header — block + chain instead of static V1.0
+ * Terminal preview card header — live block number + chain id, not a static V1.0
  */
 export function TerminalCardHeader() {
   const { data: blockNumber } = useBlockNumber({ watch: true });

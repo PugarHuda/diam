@@ -13,13 +13,12 @@ src/
 ├── PrivateOTC.sol              # Main orchestrator (Direct OTC + RFQ Vickrey)
 ├── interfaces/
 │   ├── IPrivateOTC.sol         # External interface
-│   └── IERC7984.sol            # Confidential token interface
-├── libraries/
-│   └── OTCHelpers.sol          # Helpers (encoding, math)
-└── mocks/
-    └── ConfidentialMockToken.sol  # Local ERC-7984 mock for testing
+│   ├── IERC7984.sol            # Confidential fungible token interface
+│   └── IERC7984Receiver.sol    # ERC-7984 receiver callback (transferAndCall)
+└── tokens/
+    └── DiamCToken.sol          # ERC-7984 confidential token (cUSDC, cETH)
 
-test/                            # Foundry tests
+test/                            # Foundry tests (local + fork)
 script/                          # Deploy & operational scripts
 ```
 

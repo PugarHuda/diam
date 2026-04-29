@@ -11,6 +11,7 @@ import {
   HeroAnnotations,
   TerminalCardHeader,
 } from "@/components/TerminalAnnotations";
+import { LatestIntentPreview } from "@/components/LatestIntentPreview";
 
 // Read directly from process.env — this page is a Server Component, and
 // importing lib/wagmi (which calls RainbowKit's client-only getDefaultConfig)
@@ -91,22 +92,10 @@ export default function HomePage() {
           {/* Live on-chain stats */}
           <LiveStats />
 
-          {/* Terminal preview card — illustrative on-chain view shape */}
+          {/* Terminal preview card — pulls the latest on-chain intent live */}
           <div className="glass-card mt-12 w-full max-w-5xl overflow-hidden border-[--color-primary]/20 p-1">
             <TerminalCardHeader />
-            <div className="grid grid-cols-1 gap-8 p-8 md:grid-cols-3">
-              <TerminalField
-                label="Order Origin"
-                value="0x6002...4669"
-                tone="primary"
-              />
-              <TerminalField label="Amount (Sealed)" sealed />
-              <TerminalField
-                label="Bid Proof"
-                value="zk_handle_0x0000066eee23..."
-                truncate
-              />
-            </div>
+            <LatestIntentPreview />
           </div>
         </section>
 
@@ -351,48 +340,6 @@ function ContractRow({ name, address }: { name: string; address: string }) {
         </span>
       </a>
       <CopyButton value={address} />
-    </div>
-  );
-}
-
-function TerminalField({
-  label,
-  value,
-  sealed,
-  truncate,
-  tone,
-}: {
-  label: string;
-  value?: string;
-  sealed?: boolean;
-  truncate?: boolean;
-  tone?: "primary";
-}) {
-  return (
-    <div className="space-y-3 text-left">
-      <div className="text-label-caps text-zinc-500">{label}</div>
-      <div className="flex h-10 items-center border border-zinc-800 bg-zinc-950 px-4">
-        {sealed ? (
-          <div className="flex gap-1">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div
-                key={i}
-                className={`h-6 w-3 ${
-                  i === 3 ? "" : "bg-[--color-primary]/20"
-                }`}
-              />
-            ))}
-          </div>
-        ) : (
-          <span
-            className={`font-mono text-sm ${
-              tone === "primary" ? "text-[--color-primary]" : "text-zinc-600"
-            } ${truncate ? "truncate" : ""}`}
-          >
-            {value}
-          </span>
-        )}
-      </div>
     </div>
   );
 }
