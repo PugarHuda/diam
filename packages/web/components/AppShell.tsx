@@ -14,6 +14,7 @@ type NavItem = { href: Route; label: string; icon: string };
 const NAV: NavItem[] = [
   { href: "/intents", label: "Active Intents", icon: "grid_view" },
   { href: "/create", label: "Create Intent", icon: "swap_horiz" },
+  { href: "/activity" as Route, label: "My Activity", icon: "history" },
   { href: "/portfolio", label: "Portfolio", icon: "account_balance_wallet" },
   { href: "/faucet", label: "Faucet", icon: "water_drop" },
 ];

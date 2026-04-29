@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import type { Route } from "next";
 import { useAccount, useReadContract } from "wagmi";
@@ -10,6 +10,7 @@ import { PageHeader, SectionHeader } from "@/components/PageHeader";
 import { TokenIcon } from "@/components/TokenIcon";
 import { NftReceipt } from "@/components/NftReceipt";
 import { SkeletonCard } from "@/components/Skeleton";
+import { useToast } from "@/components/Toast";
 import { privateOtcAbi } from "@/lib/abi/privateOtc";
 import { PRIVATE_OTC_ADDRESS, CUSDC_ADDRESS, CETH_ADDRESS } from "@/lib/wagmi";
 import { useAcceptIntent, useCancelIntent } from "@/lib/hooks/useOtcWrites";
@@ -32,7 +33,31 @@ export default function IntentDetailPage({
   const { address } = useAccount();
   const accept = useAcceptIntent();
   const cancel = useCancelIntent();
+  const toast = useToast();
   const [bidAmount, setBidAmount] = useState("");
+
+  // Toast tx outcomes — tx hash present in confirming, link out for transparency
+  useEffect(() => {
+    if (accept.step === "done" && accept.txHash) {
+      toast.success("Trade settled — decrypt portfolio to see new balance", {
+        href: `https://sepolia.arbiscan.io/tx/${accept.txHash}`,
+      });
+    } else if (accept.step === "error" && accept.error) {
+      toast.error(`Settle failed: ${accept.error}`);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accept.step, accept.txHash]);
+
+  useEffect(() => {
+    if (cancel.step === "done" && cancel.txHash) {
+      toast.success("Intent cancelled", {
+        href: `https://sepolia.arbiscan.io/tx/${cancel.txHash}`,
+      });
+    } else if (cancel.step === "error" && cancel.error) {
+      toast.error(`Cancel failed: ${cancel.error}`);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cancel.step, cancel.txHash]);
 
   const intentQuery = useReadContract({
     address: PRIVATE_OTC_ADDRESS,
@@ -274,6 +299,19 @@ export default function IntentDetailPage({
                   {cancel.error}
                 </p>
               )}
+              {cancel.step === "confirming" && cancel.txHash && (
+                <a
+                  href={`https://sepolia.arbiscan.io/tx/${cancel.txHash}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-2 flex items-center gap-1 font-mono text-[10px] text-amber-400 underline hover:text-amber-300"
+                >
+                  <span className="material-symbols-outlined text-xs">
+                    open_in_new
+                  </span>
+                  Tx broadcast — view on Arbiscan
+                </a>
+              )}
             </div>
           )}
 
@@ -312,6 +350,33 @@ export default function IntentDetailPage({
               {accept.error && (
                 <div className="border border-[--color-danger] bg-[--color-danger]/10 p-3 text-sm text-[--color-danger]">
                   {accept.error}
+                </div>
+              )}
+
+              {/* Tx broadcasting — show link as soon as we have a hash so
+                  user has an escape hatch if the receipt watch hangs */}
+              {accept.step === "confirming" && accept.txHash && (
+                <div className="border border-amber-700 bg-amber-950/40 p-3 font-mono text-[11px] leading-relaxed text-amber-200">
+                  <div className="flex items-center gap-2 text-amber-400">
+                    <span className="material-symbols-outlined animate-spin text-sm">
+                      sync
+                    </span>
+                    <span className="text-label-caps">SETTLING_ON_CHAIN</span>
+                  </div>
+                  <p className="mt-1 text-zinc-400">
+                    Tx broadcasted. Status updates after Arbitrum confirms.
+                  </p>
+                  <a
+                    href={`https://sepolia.arbiscan.io/tx/${accept.txHash}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-2 inline-flex items-center gap-1 break-all text-amber-400 underline hover:text-amber-300"
+                  >
+                    <span className="material-symbols-outlined text-xs">
+                      open_in_new
+                    </span>
+                    {accept.txHash}
+                  </a>
                 </div>
               )}
 
