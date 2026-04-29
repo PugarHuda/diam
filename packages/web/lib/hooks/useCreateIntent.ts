@@ -1,28 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAccount, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { decodeEventLog } from "viem";
-import { privateOtcAbi } from "@/lib/abi/privateOtc";
 import { PRIVATE_OTC_ADDRESS } from "@/lib/wagmi";
 import { useNoxClient, encryptUint256 } from "@/lib/nox-client";
+import {
+  executeCreateIntent,
+  parseIntentCreatedId,
+  type CreateIntentInput,
+  type CreateIntentStep,
+} from "./useCreateIntent.logic";
 
-export type CreateIntentInput = {
-  sellToken: `0x${string}`;
-  buyToken: `0x${string}`;
-  sellAmount: bigint;
-  minBuyAmount: bigint;
-  deadlineSeconds: number; // seconds from now
-  allowedTaker?: `0x${string}`;
-};
-
-export type CreateIntentStep =
-  | "idle"
-  | "encrypting"
-  | "signing"
-  | "confirming"
-  | "done"
-  | "error";
+export type { CreateIntentInput, CreateIntentStep };
 
 export function useCreateIntent() {
   const { address } = useAccount();
@@ -37,76 +27,35 @@ export function useCreateIntent() {
   const receipt = useWaitForTransactionReceipt({ hash: txHash ?? undefined });
 
   async function submit(input: CreateIntentInput) {
-    if (!address) throw new Error("Wallet not connected");
-    if (!ready) throw new Error("Nox client not ready");
-    setError(null);
-
-    try {
-      // 1) Encrypt off-chain
-      setStep("encrypting");
-      const client = await getClient();
-      if (!client) throw new Error("Nox client unavailable");
-
-      const sell = await encryptUint256(
-        client,
-        input.sellAmount,
-        PRIVATE_OTC_ADDRESS
-      );
-      const minBuy = await encryptUint256(
-        client,
-        input.minBuyAmount,
-        PRIVATE_OTC_ADDRESS
-      );
-
-      // 2) Sign + send
-      setStep("signing");
-      const deadline =
-        BigInt(Math.floor(Date.now() / 1000)) + BigInt(input.deadlineSeconds);
-
-      const hash = await writeContractAsync({
-        address: PRIVATE_OTC_ADDRESS,
-        abi: privateOtcAbi,
-        functionName: "createIntent",
-        args: [
-          input.sellToken,
-          input.buyToken,
-          sell.handle as `0x${string}`,
-          sell.proof,
-          minBuy.handle as `0x${string}`,
-          minBuy.proof,
-          deadline,
-          input.allowedTaker ??
-            ("0x0000000000000000000000000000000000000000" as `0x${string}`),
-        ],
-      });
-      setTxHash(hash);
-
-      setStep("confirming");
-    } catch (err) {
-      setStep("error");
-      setError(err instanceof Error ? err.message : String(err));
-    }
+    return executeCreateIntent(
+      {
+        address,
+        noxReady: ready,
+        privateOtcAddress: PRIVATE_OTC_ADDRESS,
+        getClient,
+        encryptAmount: encryptUint256,
+        writeContractAsync: writeContractAsync as (
+          args: unknown,
+        ) => Promise<`0x${string}`>,
+        nowSeconds: () => Math.floor(Date.now() / 1000),
+      },
+      input,
+      { onStep: setStep, onError: setError, onTxHash: setTxHash },
+    );
   }
 
-  // Once confirmed, parse event for intentId
-  if (receipt.data && step === "confirming") {
-    for (const log of receipt.data.logs) {
-      try {
-        const decoded = decodeEventLog({
-          abi: privateOtcAbi,
-          data: log.data,
-          topics: log.topics,
-        });
-        if (decoded.eventName === "IntentCreated") {
-          setIntentId(decoded.args.id);
-          setStep("done");
-          break;
-        }
-      } catch {
-        // Not our event, skip
+  useEffect(() => {
+    if (receipt.data && step === "confirming") {
+      const id = parseIntentCreatedId(
+        receipt.data.logs as never,
+        decodeEventLog as never,
+      );
+      if (id !== null) {
+        setIntentId(id);
+        setStep("done");
       }
     }
-  }
+  }, [receipt.data, step]);
 
   return { submit, step, error, txHash, intentId, receipt };
 }

@@ -1,19 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAccount, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { decodeEventLog } from "viem";
-import { privateOtcAbi } from "@/lib/abi/privateOtc";
 import { PRIVATE_OTC_ADDRESS } from "@/lib/wagmi";
 import { useNoxClient, encryptUint256 } from "@/lib/nox-client";
+import {
+  executeCreateRfq,
+  executeAcceptIntent,
+  executeSubmitBid,
+  executeFinalizeRfq,
+  executeRevealRfqWinner,
+  executeCancelIntent,
+  type CreateRfqInput,
+  type WriteStep,
+} from "./useOtcWrites.logic";
+import { parseIntentCreatedId } from "./useCreateIntent.logic";
 
-export type WriteStep =
-  | "idle"
-  | "encrypting"
-  | "signing"
-  | "confirming"
-  | "done"
-  | "error";
+export type { CreateRfqInput, WriteStep };
 
 type WriteState = {
   step: WriteStep;
@@ -23,16 +27,22 @@ type WriteState = {
 
 const initial: WriteState = { step: "idle", error: null, txHash: null };
 
+function makeStateAdapter(
+  setState: (next: WriteState | ((prev: WriteState) => WriteState)) => void,
+) {
+  return {
+    onStep: (step: WriteStep) =>
+      setState((s: WriteState) => ({ ...s, step })),
+    onError: (msg: string | null) =>
+      setState((s: WriteState) => ({ ...s, error: msg })),
+    onTxHash: (txHash: `0x${string}`) =>
+      setState((s: WriteState) => ({ ...s, txHash })),
+  };
+}
+
 /* -------------------------------------------------------------------------- */
 /*                                createRFQ                                   */
 /* -------------------------------------------------------------------------- */
-
-export type CreateRfqInput = {
-  sellToken: `0x${string}`;
-  buyToken: `0x${string}`;
-  sellAmount: bigint;
-  biddingDeadlineSeconds: number;
-};
 
 export function useCreateRfq() {
   const { address } = useAccount();
@@ -46,61 +56,35 @@ export function useCreateRfq() {
   });
 
   async function submit(input: CreateRfqInput) {
-    if (!address) throw new Error("Wallet not connected");
-    if (!ready) throw new Error("Nox client not ready");
-    setState({ step: "encrypting", error: null, txHash: null });
-
-    try {
-      const client = await getClient();
-      if (!client) throw new Error("Nox client unavailable");
-
-      const sell = await encryptUint256(client, input.sellAmount, PRIVATE_OTC_ADDRESS);
-
-      setState((s) => ({ ...s, step: "signing" }));
-      const deadline =
-        BigInt(Math.floor(Date.now() / 1000)) +
-        BigInt(input.biddingDeadlineSeconds);
-
-      const hash = await writeContractAsync({
-        address: PRIVATE_OTC_ADDRESS,
-        abi: privateOtcAbi,
-        functionName: "createRFQ",
-        args: [
-          input.sellToken,
-          input.buyToken,
-          sell.handle as `0x${string}`,
-          sell.proof,
-          deadline,
-        ],
-      });
-      setState({ step: "confirming", error: null, txHash: hash });
-    } catch (err) {
-      setState({
-        step: "error",
-        error: err instanceof Error ? err.message : String(err),
-        txHash: null,
-      });
-    }
+    return executeCreateRfq(
+      {
+        address,
+        noxReady: ready,
+        privateOtcAddress: PRIVATE_OTC_ADDRESS,
+        getClient,
+        encryptAmount: encryptUint256,
+        writeContractAsync: writeContractAsync as (
+          args: unknown,
+        ) => Promise<`0x${string}`>,
+        nowSeconds: () => Math.floor(Date.now() / 1000),
+      },
+      input,
+      makeStateAdapter(setState),
+    );
   }
 
-  if (receipt.data && state.step === "confirming") {
-    for (const log of receipt.data.logs) {
-      try {
-        const decoded = decodeEventLog({
-          abi: privateOtcAbi,
-          data: log.data,
-          topics: log.topics,
-        });
-        if (decoded.eventName === "IntentCreated") {
-          setIntentId(decoded.args.id);
-          setState((s) => ({ ...s, step: "done" }));
-          break;
-        }
-      } catch {
-        // skip
+  useEffect(() => {
+    if (receipt.data && state.step === "confirming") {
+      const id = parseIntentCreatedId(
+        receipt.data.logs as never,
+        decodeEventLog as never,
+      );
+      if (id !== null) {
+        setIntentId(id);
+        setState((s) => ({ ...s, step: "done" }));
       }
     }
-  }
+  }, [receipt.data, state.step]);
 
   return { submit, ...state, intentId };
 }
@@ -119,36 +103,28 @@ export function useAcceptIntent() {
   });
 
   async function submit(intentId: bigint, buyAmount: bigint) {
-    if (!address) throw new Error("Wallet not connected");
-    if (!ready) throw new Error("Nox client not ready");
-    setState({ step: "encrypting", error: null, txHash: null });
+    return executeAcceptIntent(
+      {
+        address,
+        noxReady: ready,
+        privateOtcAddress: PRIVATE_OTC_ADDRESS,
+        getClient,
+        encryptAmount: encryptUint256,
+        writeContractAsync: writeContractAsync as (
+          args: unknown,
+        ) => Promise<`0x${string}`>,
+        nowSeconds: () => Math.floor(Date.now() / 1000),
+      },
+      { intentId, buyAmount },
+      makeStateAdapter(setState),
+    );
+  }
 
-    try {
-      const client = await getClient();
-      if (!client) throw new Error("Nox client unavailable");
-
-      const buy = await encryptUint256(client, buyAmount, PRIVATE_OTC_ADDRESS);
-
-      setState((s) => ({ ...s, step: "signing" }));
-      const hash = await writeContractAsync({
-        address: PRIVATE_OTC_ADDRESS,
-        abi: privateOtcAbi,
-        functionName: "acceptIntent",
-        args: [intentId, buy.handle as `0x${string}`, buy.proof],
-      });
-      setState({ step: "confirming", error: null, txHash: hash });
-    } catch (err) {
-      setState({
-        step: "error",
-        error: err instanceof Error ? err.message : String(err),
-        txHash: null,
-      });
+  useEffect(() => {
+    if (receipt.isSuccess && state.step === "confirming") {
+      setState((s) => ({ ...s, step: "done" }));
     }
-  }
-
-  if (receipt.isSuccess && state.step === "confirming") {
-    setState((s) => ({ ...s, step: "done" }));
-  }
+  }, [receipt.isSuccess, state.step]);
 
   return { submit, ...state };
 }
@@ -167,36 +143,28 @@ export function useSubmitBid() {
   });
 
   async function submit(rfqId: bigint, bidAmount: bigint) {
-    if (!address) throw new Error("Wallet not connected");
-    if (!ready) throw new Error("Nox client not ready");
-    setState({ step: "encrypting", error: null, txHash: null });
+    return executeSubmitBid(
+      {
+        address,
+        noxReady: ready,
+        privateOtcAddress: PRIVATE_OTC_ADDRESS,
+        getClient,
+        encryptAmount: encryptUint256,
+        writeContractAsync: writeContractAsync as (
+          args: unknown,
+        ) => Promise<`0x${string}`>,
+        nowSeconds: () => Math.floor(Date.now() / 1000),
+      },
+      { rfqId, bidAmount },
+      makeStateAdapter(setState),
+    );
+  }
 
-    try {
-      const client = await getClient();
-      if (!client) throw new Error("Nox client unavailable");
-
-      const bid = await encryptUint256(client, bidAmount, PRIVATE_OTC_ADDRESS);
-
-      setState((s) => ({ ...s, step: "signing" }));
-      const hash = await writeContractAsync({
-        address: PRIVATE_OTC_ADDRESS,
-        abi: privateOtcAbi,
-        functionName: "submitBid",
-        args: [rfqId, bid.handle as `0x${string}`, bid.proof],
-      });
-      setState({ step: "confirming", error: null, txHash: hash });
-    } catch (err) {
-      setState({
-        step: "error",
-        error: err instanceof Error ? err.message : String(err),
-        txHash: null,
-      });
+  useEffect(() => {
+    if (receipt.isSuccess && state.step === "confirming") {
+      setState((s) => ({ ...s, step: "done" }));
     }
-  }
-
-  if (receipt.isSuccess && state.step === "confirming") {
-    setState((s) => ({ ...s, step: "done" }));
-  }
+  }, [receipt.isSuccess, state.step]);
 
   return { submit, ...state };
 }
@@ -213,27 +181,59 @@ export function useFinalizeRfq() {
   });
 
   async function submit(rfqId: bigint) {
-    setState({ step: "signing", error: null, txHash: null });
-    try {
-      const hash = await writeContractAsync({
-        address: PRIVATE_OTC_ADDRESS,
-        abi: privateOtcAbi,
-        functionName: "finalizeRFQ",
-        args: [rfqId],
-      });
-      setState({ step: "confirming", error: null, txHash: hash });
-    } catch (err) {
-      setState({
-        step: "error",
-        error: err instanceof Error ? err.message : String(err),
-        txHash: null,
-      });
-    }
+    return executeFinalizeRfq(
+      {
+        privateOtcAddress: PRIVATE_OTC_ADDRESS,
+        writeContractAsync: writeContractAsync as (
+          args: unknown,
+        ) => Promise<`0x${string}`>,
+      },
+      { rfqId },
+      makeStateAdapter(setState),
+    );
   }
 
-  if (receipt.isSuccess && state.step === "confirming") {
-    setState((s) => ({ ...s, step: "done" }));
+  useEffect(() => {
+    if (receipt.isSuccess && state.step === "confirming") {
+      setState((s) => ({ ...s, step: "done" }));
+    }
+  }, [receipt.isSuccess, state.step]);
+
+  return { submit, ...state };
+}
+
+/* -------------------------------------------------------------------------- */
+/*                              revealRFQWinner                               */
+/* -------------------------------------------------------------------------- */
+
+/// Step 2 of the RFQ flow. Maker decrypts bid amounts off-chain (auditor
+/// flow via `Nox.allow`), determines the actual highest bidder, then calls
+/// this with the chosen bid index to settle.
+export function useRevealRfqWinner() {
+  const { writeContractAsync } = useWriteContract();
+  const [state, setState] = useState<WriteState>(initial);
+  const receipt = useWaitForTransactionReceipt({
+    hash: state.txHash ?? undefined,
+  });
+
+  async function submit(rfqId: bigint, winnerIdx: bigint) {
+    return executeRevealRfqWinner(
+      {
+        privateOtcAddress: PRIVATE_OTC_ADDRESS,
+        writeContractAsync: writeContractAsync as (
+          args: unknown,
+        ) => Promise<`0x${string}`>,
+      },
+      { rfqId, winnerIdx },
+      makeStateAdapter(setState),
+    );
   }
+
+  useEffect(() => {
+    if (receipt.isSuccess && state.step === "confirming") {
+      setState((s) => ({ ...s, step: "done" }));
+    }
+  }, [receipt.isSuccess, state.step]);
 
   return { submit, ...state };
 }
@@ -250,27 +250,23 @@ export function useCancelIntent() {
   });
 
   async function submit(intentId: bigint) {
-    setState({ step: "signing", error: null, txHash: null });
-    try {
-      const hash = await writeContractAsync({
-        address: PRIVATE_OTC_ADDRESS,
-        abi: privateOtcAbi,
-        functionName: "cancelIntent",
-        args: [intentId],
-      });
-      setState({ step: "confirming", error: null, txHash: hash });
-    } catch (err) {
-      setState({
-        step: "error",
-        error: err instanceof Error ? err.message : String(err),
-        txHash: null,
-      });
-    }
+    return executeCancelIntent(
+      {
+        privateOtcAddress: PRIVATE_OTC_ADDRESS,
+        writeContractAsync: writeContractAsync as (
+          args: unknown,
+        ) => Promise<`0x${string}`>,
+      },
+      { intentId },
+      makeStateAdapter(setState),
+    );
   }
 
-  if (receipt.isSuccess && state.step === "confirming") {
-    setState((s) => ({ ...s, step: "done" }));
-  }
+  useEffect(() => {
+    if (receipt.isSuccess && state.step === "confirming") {
+      setState((s) => ({ ...s, step: "done" }));
+    }
+  }, [receipt.isSuccess, state.step]);
 
   return { submit, ...state };
 }

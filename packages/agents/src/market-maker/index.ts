@@ -12,15 +12,7 @@
 import { createViemHandleClient } from "@iexec-nox/handle";
 import { publicClient, walletClient, PRIVATE_OTC_ADDRESS } from "../config.js";
 import { privateOtcAbi } from "../abi.js";
-
-interface Strategy {
-  /** Asset pair tokens we'll bid on. Map from sell→buy to fair-price USD anchor. */
-  pairs: Record<string, { sellToken: `0x${string}`; buyToken: `0x${string}`; refPriceUsd: number }>;
-  /** Maximum bid size in raw token units (decimals included). */
-  maxNotional: bigint;
-  /** Bid spread in basis points below fair price. 30 bps = 0.3%. */
-  spreadBps: number;
-}
+import { decideBid, type Strategy, type IntentEventArgs } from "./logic.js";
 
 const DEFAULT_STRATEGY: Strategy = {
   pairs: {
@@ -59,45 +51,25 @@ export async function startMarketMaker() {
 }
 
 async function handleIntent(
-  log: {
-    args: {
-      id?: bigint;
-      maker?: `0x${string}`;
-      sellToken?: `0x${string}`;
-      buyToken?: `0x${string}`;
-      mode?: number;
-    };
-  },
-  handleClient: Awaited<ReturnType<typeof createViemHandleClient>>
+  log: { args: IntentEventArgs },
+  handleClient: Awaited<ReturnType<typeof createViemHandleClient>>,
 ) {
-  const { id, sellToken, buyToken, mode, maker } = log.args;
-  if (!id || !sellToken || !buyToken || mode === undefined) return;
-
-  // Skip non-RFQ
-  if (mode !== 1) return;
-  // Skip own RFQs
-  if (maker?.toLowerCase() === walletClient.account.address.toLowerCase()) return;
-
-  // Match against strategy
-  const matched = Object.entries(DEFAULT_STRATEGY.pairs).find(
-    ([, cfg]) =>
-      cfg.sellToken.toLowerCase() === sellToken.toLowerCase() &&
-      cfg.buyToken.toLowerCase() === buyToken.toLowerCase()
+  const decision = decideBid(
+    log.args,
+    walletClient.account.address,
+    DEFAULT_STRATEGY,
   );
-  if (!matched) return;
+  if (decision.kind === "skip") return;
 
-  const [pairName, cfg] = matched;
-  console.log(`[market-maker] new RFQ #${id} on ${pairName}, evaluating bid…`);
-
-  // Strategic bid: refPrice * (1 - spreadBps/10000) * unit
-  // For demo, bid a fraction of max notional at the spread-adjusted price
-  const bidAmount = (DEFAULT_STRATEGY.maxNotional * BigInt(10000 - DEFAULT_STRATEGY.spreadBps)) / BigInt(10000);
+  console.log(
+    `[market-maker] new RFQ #${decision.intentId} on ${decision.pairName}, evaluating bid…`,
+  );
 
   // Encrypt bid off-chain via Nox SDK
   const { handle, handleProof } = await handleClient.encryptInput(
-    bidAmount,
+    decision.bidAmount,
     "uint256",
-    PRIVATE_OTC_ADDRESS
+    PRIVATE_OTC_ADDRESS,
   );
 
   // Submit
@@ -105,10 +77,14 @@ async function handleIntent(
     address: PRIVATE_OTC_ADDRESS,
     abi: privateOtcAbi,
     functionName: "submitBid",
-    args: [id, handle as `0x${string}`, handleProof as `0x${string}`],
+    args: [
+      decision.intentId,
+      handle as `0x${string}`,
+      handleProof as `0x${string}`,
+    ],
   });
 
   console.log(
-    `[market-maker] bid submitted on RFQ #${id}: tx=${txHash} pair=${pairName} (encrypted amount, refPrice=$${cfg.refPriceUsd})`
+    `[market-maker] bid submitted on RFQ #${decision.intentId}: tx=${txHash} pair=${decision.pairName} (encrypted amount, refPrice=$${decision.refPriceUsd})`,
   );
 }

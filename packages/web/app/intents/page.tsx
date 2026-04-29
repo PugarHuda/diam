@@ -277,9 +277,14 @@ function StatusBadge({ status }: { status: number }) {
     1: "border-zinc-800 bg-zinc-900/40 text-zinc-500",
     2: "border-orange-900 bg-orange-950/40 text-orange-400",
     3: "border-zinc-800 bg-zinc-900/40 text-zinc-600",
+    4: "border-amber-700 bg-amber-950/40 text-amber-400 animate-pulse",
   };
   return (
-    <span className={`text-label-caps border px-2 py-0.5 text-[10px] ${map[status]}`}>
+    <span
+      className={`text-label-caps border px-2 py-0.5 text-[10px] ${
+        map[status] ?? "border-zinc-800 bg-zinc-900/40 text-zinc-500"
+      }`}
+    >
       {statusLabel(status)}
     </span>
   );

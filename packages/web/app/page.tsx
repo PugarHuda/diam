@@ -81,7 +81,7 @@ export default function HomePage() {
           {/* Live on-chain stats */}
           <LiveStats />
 
-          {/* Terminal mock card */}
+          {/* Terminal preview card — illustrative on-chain view shape */}
           <div className="glass-card mt-12 w-full max-w-5xl overflow-hidden border-[--color-primary]/20 p-1">
             <TerminalCardHeader />
             <div className="grid grid-cols-1 gap-8 p-8 md:grid-cols-3">

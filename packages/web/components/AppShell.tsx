@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 import type { Route } from "next";
 import { useAccount } from "wagmi";
 import { Header } from "./Header";
+import { NetworkGuard } from "./NetworkGuard";
+import { BalanceWidget } from "./BalanceWidget";
 import { shortAddress } from "@/lib/utils";
 
 type NavItem = { href: Route; label: string; icon: string };
@@ -23,6 +25,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <>
       <Header />
+      <div className="pt-16">
+        <NetworkGuard />
+      </div>
 
       <aside className="fixed left-0 top-0 z-40 hidden h-full w-64 flex-col border-r border-zinc-800/80 bg-zinc-950/60 pb-8 pt-20 backdrop-blur-2xl lg:flex">
         <div className="mb-8 flex items-center gap-3 px-6">
@@ -106,10 +111,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      <main className="relative w-full pt-20 pb-16 lg:ml-64 lg:px-8">
+      <main className="relative w-full pt-4 pb-16 lg:ml-64 lg:px-8">
         <div className="grid-bg pointer-events-none absolute inset-0 -z-10 opacity-10" />
         <div className="mx-auto max-w-[1200px] px-6 lg:px-0">{children}</div>
       </main>
+
+      <BalanceWidget />
     </>
   );
 }

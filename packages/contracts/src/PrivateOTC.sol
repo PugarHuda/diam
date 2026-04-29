@@ -3,7 +3,6 @@ pragma solidity ^0.8.27;
 
 import {Nox, euint256, externalEuint256, ebool} from "@iexec-nox/nox-protocol-contracts/contracts/sdk/Nox.sol";
 
-import {IPrivateOTC} from "./interfaces/IPrivateOTC.sol";
 import {IERC7984} from "./interfaces/IERC7984.sol";
 
 /// @title PrivateOTC — On-chain confidential OTC desk
@@ -16,7 +15,15 @@ contract PrivateOTC {
         Open,
         Filled,
         Cancelled,
-        Expired
+        Expired,
+        // RFQ only — auction frozen and second-price computed; maker must
+        // call revealRFQWinner(id, winnerIdx) to pick the highest bidder
+        // (verified off-chain via Nox decryption of bid amounts) and settle.
+        // Prevents the "always bids[0] wins" bug — Vickrey requires the
+        // highest bidder to receive the goods, but Nox doesn't yet support
+        // encrypted address tracking, so we surface the winner-pick to the
+        // maker explicitly.
+        PendingReveal
     }
 
     enum Mode {
@@ -34,6 +41,9 @@ contract PrivateOTC {
         IntentStatus status;
         Mode mode;
         address allowedTaker;
+        // RFQ only — encrypted second-highest bid amount, computed at
+        // finalizeRFQ time, consumed at revealRFQWinner time.
+        euint256 priceToPay;
     }
 
     struct Bid {
@@ -52,6 +62,10 @@ contract PrivateOTC {
     event BidSubmitted(uint256 indexed id, address indexed taker);
     event Settled(uint256 indexed id, address indexed taker);
     event Cancelled(uint256 indexed id);
+    /// @notice Emitted when an RFQ has been finalized but is awaiting maker
+    /// reveal of the winning bidder. Maker decrypts bid amounts off-chain
+    /// then calls revealRFQWinner(id, winnerIdx) to settle.
+    event RFQPendingReveal(uint256 indexed id);
 
     error IntentNotOpen();
     error NotMaker();
@@ -60,6 +74,8 @@ contract PrivateOTC {
     error DeadlineNotPassed();
     error MaxBidsReached();
     error InsufficientBids();
+    error InvalidWinnerIndex();
+    error NotPendingReveal();
 
     /* -------------------------------------------------------------------------- */
     /*                                Direct OTC                                  */
@@ -91,7 +107,8 @@ contract PrivateOTC {
             deadline: deadline,
             status: IntentStatus.Open,
             mode: Mode.Direct,
-            allowedTaker: allowedTaker
+            allowedTaker: allowedTaker,
+            priceToPay: Nox.toEuint256(0)
         });
 
         Nox.allowThis(sellAmount);
@@ -161,7 +178,8 @@ contract PrivateOTC {
             deadline: biddingDeadline,
             status: IntentStatus.Open,
             mode: Mode.RFQ,
-            allowedTaker: address(0)
+            allowedTaker: address(0),
+            priceToPay: Nox.toEuint256(0)
         });
 
         Nox.allowThis(sellAmount);
@@ -186,6 +204,13 @@ contract PrivateOTC {
         emit BidSubmitted(id, msg.sender);
     }
 
+    /// @notice Step 1 of 2: freeze the auction and compute the encrypted
+    /// second-highest price. Anyone can call this after the bidding deadline.
+    /// Maker must then call revealRFQWinner with the winning bid index to
+    /// settle. The 2-step flow is necessary because Nox doesn't yet support
+    /// encrypted addresses, so the winner must be picked off-chain by the
+    /// maker (who decrypts bid amounts via the per-bid Nox.allow access
+    /// granted to them).
     function finalizeRFQ(uint256 id) external {
         Intent storage intent = intents[id];
         if (intent.status != IntentStatus.Open) revert IntentNotOpen();
@@ -195,9 +220,46 @@ contract PrivateOTC {
         Bid[] storage _bids = bids[id];
         if (_bids.length < 2) revert InsufficientBids();
 
-        (address winnerAddr, euint256 priceToPay) = _pickVickreyWinner(id);
+        euint256 priceToPay = _computeSecondPrice(id);
+        intent.priceToPay = priceToPay;
+        intent.status = IntentStatus.PendingReveal;
 
-        _settleAtomic(intent.sellToken, intent.buyToken, intent.maker, winnerAddr, intent.sellAmount, priceToPay);
+        // Allow the maker to read every bid amount off-chain so they can
+        // determine the actual highest bidder. (Bid handles already had ACL
+        // for their own taker via submitBid.)
+        for (uint256 i = 0; i < _bids.length; i++) {
+            Nox.allow(_bids[i].offeredAmount, intent.maker);
+        }
+        Nox.allow(priceToPay, intent.maker);
+
+        emit RFQPendingReveal(id);
+    }
+
+    /// @notice Step 2 of 2: maker picks the actual highest bidder (verified
+    /// off-chain via Nox decryption) and settlement runs. Trust assumption:
+    /// the maker is honest about which bidder won. Maker has weak incentive
+    /// to cheat (they get paid the same encrypted second-price regardless of
+    /// who they pick), and reputation/social cost makes off-chain cheating
+    /// expensive. For stronger guarantees, future Nox versions with eaddress
+    /// support will let us pick the winner fully on-chain.
+    function revealRFQWinner(uint256 id, uint256 winnerIdx) external {
+        Intent storage intent = intents[id];
+        if (intent.maker != msg.sender) revert NotMaker();
+        if (intent.status != IntentStatus.PendingReveal) revert NotPendingReveal();
+
+        Bid[] storage _bids = bids[id];
+        if (winnerIdx >= _bids.length) revert InvalidWinnerIndex();
+
+        address winnerAddr = _bids[winnerIdx].taker;
+
+        _settleAtomic(
+            intent.sellToken,
+            intent.buyToken,
+            intent.maker,
+            winnerAddr,
+            intent.sellAmount,
+            intent.priceToPay
+        );
 
         intent.status = IntentStatus.Filled;
         emit Settled(id, winnerAddr);
@@ -207,26 +269,30 @@ contract PrivateOTC {
     /*                             Internal helpers                               */
     /* -------------------------------------------------------------------------- */
 
-    /// @dev Vickrey: highest bid wins, pays second-highest (encrypted).
-    /// Winner address is plain (via event); price they pay is encrypted.
-    function _pickVickreyWinner(uint256 id) internal returns (address winnerAddr, euint256 priceToPay) {
+    /// @dev Vickrey: compute the encrypted second-highest bid amount. Used
+    /// as the price the winner will pay. Winner address is determined
+    /// separately by the maker via revealRFQWinner (see comment there).
+    ///
+    /// Three cases per iteration:
+    ///   candidate > highest  → second = highest, highest = candidate
+    ///   second < candidate ≤ highest → second = candidate (highest unchanged)
+    ///   candidate ≤ second   → no change
+    /// The naive `second = isHigher ? highest : second` would lose the middle
+    /// case — caught by Vickrey algorithm fuzz tests in VickreyAlgorithm.t.sol.
+    function _computeSecondPrice(uint256 id) internal returns (euint256 priceToPay) {
         Bid[] storage _bids = bids[id];
 
-        // Initial: assume bid[0] highest. Resolve real top-2 in tracking loop.
-        winnerAddr = _bids[0].taker;
         ebool initSwap = Nox.gt(_bids[1].offeredAmount, _bids[0].offeredAmount);
         euint256 highest = Nox.select(initSwap, _bids[1].offeredAmount, _bids[0].offeredAmount);
         euint256 second = Nox.select(initSwap, _bids[0].offeredAmount, _bids[1].offeredAmount);
 
-        // For winner address: plain comparison via offeredAmount handles is impossible
-        // since handles are 32-byte references. We track the maximum-bid index off-chain
-        // by emitting BidSubmitted events and let the frontend match the winning event.
-        // (Alternative: use eaddress when supported in Nox library v0.3+.)
-
         for (uint256 i = 2; i < _bids.length; i++) {
             euint256 candidate = _bids[i].offeredAmount;
             ebool isHigher = Nox.gt(candidate, highest);
-            second = Nox.select(isHigher, highest, second);
+            ebool isMiddle = Nox.gt(candidate, second);
+
+            euint256 newSecondIfNotHigher = Nox.select(isMiddle, candidate, second);
+            second = Nox.select(isHigher, highest, newSecondIfNotHigher);
             highest = Nox.select(isHigher, candidate, highest);
         }
 

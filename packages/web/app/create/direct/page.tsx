@@ -6,6 +6,7 @@ import { AppShell } from "@/components/AppShell";
 import { PageHeader, SectionHeader } from "@/components/PageHeader";
 import { ChainGPTAdvisor } from "@/components/ChainGPTAdvisor";
 import { useCreateIntent } from "@/lib/hooks/useCreateIntent";
+import { safeUnitPrice } from "@/lib/precision";
 import { CUSDC_ADDRESS, CETH_ADDRESS } from "@/lib/wagmi";
 
 const TOKENS = [
@@ -174,12 +175,16 @@ export default function DirectOtcPage() {
                 />
               </Field>
 
-              {sellAmount && minBuyAmount && Number(sellAmount) > 0 && (
-                <ChainGPTAdvisor
-                  pair={`${sellTok.symbol}/${buyTok.symbol}`}
-                  unitPriceUsd={Number(minBuyAmount) / Number(sellAmount)}
-                />
-              )}
+              {(() => {
+                const unitPrice = safeUnitPrice(minBuyAmount, sellAmount);
+                if (unitPrice === null) return null;
+                return (
+                  <ChainGPTAdvisor
+                    pair={`${sellTok.symbol}/${buyTok.symbol}`}
+                    unitPriceUsd={unitPrice}
+                  />
+                );
+              })()}
 
               {error && (
                 <div className="border border-[--color-danger] bg-[--color-danger]/10 p-3 text-sm text-[--color-danger]">

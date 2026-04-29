@@ -1,4 +1,10 @@
 import type { NextConfig } from "next";
+import bundleAnalyzer from "@next/bundle-analyzer";
+
+const withBundleAnalyzer = bundleAnalyzer({
+  // Enable via `ANALYZE=true pnpm build` — opens reports in browser.
+  enabled: process.env.ANALYZE === "true",
+});
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
@@ -7,4 +13,4 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["pino-pretty", "lokijs", "encoding"],
 };
 
-export default nextConfig;
+export default withBundleAnalyzer(nextConfig);

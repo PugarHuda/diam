@@ -23,13 +23,16 @@ import { arbitrumSepolia } from "viem/chains";
 import { createViemHandleClient } from "@iexec-nox/handle";
 
 const ADDRESSES = {
-  privateOtc: "0x5b2C0c83e41bF9ef072d742096C49DFDB814CEB4" as `0x${string}`,
-  cusdc: "0x57736B816F6cb53c6B2c742D3A162E89Db162ADE" as `0x${string}`,
+  privateOtc: process.env.NEXT_PUBLIC_PRIVATE_OTC_ADDRESS as `0x${string}`,
+  cusdc: process.env.NEXT_PUBLIC_CUSDC_ADDRESS as `0x${string}`,
 };
+if (!ADDRESSES.privateOtc || !ADDRESSES.cusdc) {
+  throw new Error("Set NEXT_PUBLIC_*_ADDRESS env vars");
+}
 
 const otcAbi = parseAbi([
   "function submitBid(uint256 id, bytes32 bidAmountHandle, bytes bidProof)",
-  "function intents(uint256) view returns (address maker, address sellToken, address buyToken, bytes32 sellAmount, bytes32 minBuyAmount, uint64 deadline, uint8 status, uint8 mode, address allowedTaker)",
+  "function intents(uint256) view returns (address maker, address sellToken, address buyToken, bytes32 sellAmount, bytes32 minBuyAmount, uint64 deadline, uint8 status, uint8 mode, address allowedTaker, bytes32 priceToPay)",
 ]);
 
 const seedKey = (label: string) =>
@@ -56,16 +59,20 @@ async function main() {
     transport: http(rpc),
   });
 
-  // Bid plan — varied amounts so Vickrey winner is interesting
-  // After fresh deploy, RFQ ids: deployer's = #2, Carol's = #5
+  // Bid plan — varied amounts so Vickrey winner is interesting.
+  // Targets the 2 newest open RFQs created by `seed` + `seed-multi`.
   const bids: BidPlan[] = [
-    // RFQ #2 (deployer's RFQ: 2 cETH for cUSDC, 6h window)
-    { rfqId: 2n, bidder: "Alice", bidderKey: seedKey("alice"), amount: parseUnits("6000", 6) },
-    { rfqId: 2n, bidder: "Bob", bidderKey: seedKey("bob"), amount: parseUnits("6500", 6) },
-    { rfqId: 2n, bidder: "Carol", bidderKey: seedKey("carol"), amount: parseUnits("6300", 6) },
+    // RFQ #8 (deployer's, 2 cETH for cUSDC, 6h window)
+    // Bob has the highest (6500), Carol second (6200) → second-price = 6200
+    { rfqId: 8n, bidder: "Alice", bidderKey: seedKey("alice"), amount: parseUnits("5800", 6) },
+    { rfqId: 8n, bidder: "Bob",   bidderKey: seedKey("bob"),   amount: parseUnits("6500", 6) },
+    { rfqId: 8n, bidder: "Carol", bidderKey: seedKey("carol"), amount: parseUnits("6200", 6) },
 
-    // RFQ #5 (Carol's RFQ: 1 cETH for cUSDC, 4h window) — only need 1 more (Alice + Bob already bid in earlier run)
-    { rfqId: 5n, bidder: "Deployer", bidderKey: adminKey as `0x${string}`, amount: parseUnits("3200", 6) },
+    // RFQ #11 (Carol's, 1 cETH for cUSDC, 4h window)
+    // Bob has the highest (3500), Alice second (3300) → second-price = 3300
+    { rfqId: 11n, bidder: "Deployer", bidderKey: adminKey as `0x${string}`, amount: parseUnits("3000", 6) },
+    { rfqId: 11n, bidder: "Alice",    bidderKey: seedKey("alice"),          amount: parseUnits("3300", 6) },
+    { rfqId: 11n, bidder: "Bob",      bidderKey: seedKey("bob"),            amount: parseUnits("3500", 6) },
   ];
 
   for (const plan of bids) {
@@ -95,6 +102,7 @@ async function main() {
         bigint,
         number,
         number,
+        `0x${string}`,
         `0x${string}`,
       ];
     } catch (err) {
@@ -165,8 +173,8 @@ async function main() {
   console.log(
     "\n[seed-bids] ✓ done. View RFQs:",
   );
-  console.log("  https://private-otc.vercel.app/rfq/5");
   console.log("  https://private-otc.vercel.app/rfq/8");
+  console.log("  https://private-otc.vercel.app/rfq/11");
 }
 
 main().catch((err) => {

@@ -103,6 +103,32 @@
 - Show the Strategy B "trade marked Filled even if bid below min" detail if possible — it's a unique privacy property.
 - Avoid showing CHAINGPT_API_KEY or PRIVATE_KEY environment values.
 
+---
+
+## Bonus: Engineering credibility cut (60s, for X post / longer technical demo)
+
+> Use this when you want to show *how* it was built, not just *what* it does.
+> Strongest signal for technical judges.
+
+**Visual:**
+- 0:00 — Cut to terminal: `forge test --match-contract VickreyAlgorithm`. Watch tests run. Highlight `testFuzz_pickTopTwo_uniqueBidsYieldStrictSecondMax` running 256 iterations.
+- 0:12 — Pull up `git log` showing the Vickrey bug fix commit. Highlight the diff: 3 lines changed in `_pickVickreyWinner`.
+- 0:22 — Show `CHANGELOG.md` excerpt: *"Found and fixed a real Vickrey-correctness bug. Bid `[100, 300, 200]` would have charged `100` instead of correct `200`."*
+- 0:35 — Cut to GitHub Actions tab: green CI badge, all 4 jobs passing — Solidity, web, MCP, agents.
+- 0:48 — Final: terminal `pnpm test` total — "370 tests passing across 4 packages."
+
+**Voice-over (60s):**
+> "One more thing. While building Diam I wrote a test suite that mirrored the
+> Vickrey algorithm in plain Solidity, then fuzzed it with 256 random bid sets.
+> The mirror failed — meaning the on-chain encrypted version had the same bug.
+> The contract was losing the second-highest bid when it fell between the
+> initial highest and second. Three lines fixed it. Three hundred and seventy
+> tests across four packages now stand behind every claim. *This* is what
+> continuous testing buys you in confidential DeFi: not just code that works,
+> but code you can prove works."
+
+---
+
 ## After recording
 
 - [ ] Export 1080p mp4, < 50MB

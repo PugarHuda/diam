@@ -14,7 +14,10 @@
     "settlement-monitor": "tsx src/settlement-monitor/index.ts",
     "seed": "tsx src/seed/index.ts",
     "seed-multi": "tsx src/seed/seed-multi.ts",
-    "seed-bids": "tsx src/seed/seed-bids.ts"
+    "seed-bids": "tsx src/seed/seed-bids.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "viem": "^2.21.55",
@@ -27,6 +30,8 @@
   "devDependencies": {
     "@types/node": "^22.10.2",
     "tsx": "^4.19.2",
-    "typescript": "^5.6.3"
+    "typescript": "^5.6.3",
+    "vitest": "^3.2.4",
+    "@vitest/coverage-v8": "^3.2.4"
   }
 }

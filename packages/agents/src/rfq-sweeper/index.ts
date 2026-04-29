@@ -1,16 +1,21 @@
 /**
- * RFQ Sweeper Agent — finalize expired RFQs.
+ * RFQ Sweeper Agent — kick off finalization for expired RFQs.
  *
  * Polls every 5 minutes. Scans last N intents for RFQs where:
  *   - mode = RFQ
  *   - status = Open (0)
  *   - block.timestamp > deadline
  *   - bids.length >= 2 (else finalize would revert)
- * Calls finalizeRFQ to settle.
+ * Calls finalizeRFQ to freeze the auction and compute the encrypted
+ * second-highest price. Final settlement requires the maker to call
+ * revealRFQWinner(id, winnerIdx) — the sweeper does NOT do that step
+ * because picking the winner requires off-chain decryption of bid amounts
+ * (auditor flow), which the agent doesn't have keys for.
  */
 
 import { publicClient, walletClient, PRIVATE_OTC_ADDRESS } from "../config.js";
 import { privateOtcAbi } from "../abi.js";
+import { decideFinalize, scanWindow, type IntentTuple } from "./logic.js";
 
 const SWEEP_INTERVAL_MS = 5 * 60 * 1000;
 const SCAN_DEPTH = 50; // last 50 intents
@@ -45,36 +50,28 @@ async function sweep() {
     functionName: "nextIntentId",
   })) as bigint;
 
-  const start = next > BigInt(SCAN_DEPTH) ? next - BigInt(SCAN_DEPTH) : 0n;
+  const { start, end } = scanWindow(next, SCAN_DEPTH);
   const now = BigInt(Math.floor(Date.now() / 1000));
 
-  for (let id = start; id < next; id++) {
+  for (let id = start; id < end; id++) {
     try {
       const intent = (await publicClient.readContract({
         address: PRIVATE_OTC_ADDRESS,
         abi: privateOtcAbi,
         functionName: "intents",
         args: [id],
-      })) as readonly [
-        `0x${string}`, // maker
-        `0x${string}`, // sellToken
-        `0x${string}`, // buyToken
-        `0x${string}`, // sellAmountHandle
-        `0x${string}`, // minBuyAmountHandle
-        bigint, // deadline
-        number, // status
-        number, // mode
-        `0x${string}`, // allowedTaker
-      ];
+      })) as IntentTuple;
 
-      const status = intent[6];
-      const mode = intent[7];
-      const deadline = intent[5];
-
-      if (status !== 0 || mode !== 1 || deadline >= now) continue;
+      // Cheap rejection first — skip RPC calls if intent is obviously not
+      // finalize-eligible (saves countBids RPC calls on most intents).
+      const preCheck = decideFinalize(intent, now, /* placeholder */ 2);
+      if (preCheck.kind === "skip" && preCheck.reason !== "insufficient bids") {
+        continue;
+      }
 
       const bidCount = await countBids(id);
-      if (bidCount < 2) continue;
+      const decision = decideFinalize(intent, now, bidCount);
+      if (decision.kind === "skip") continue;
 
       console.log(`[rfq-sweeper] finalizing RFQ #${id} (${bidCount} bids)`);
       const txHash = await walletClient.writeContract({

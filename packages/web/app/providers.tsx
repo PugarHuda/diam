@@ -5,6 +5,7 @@ import { RainbowKitProvider, darkTheme } from "@rainbow-me/rainbowkit";
 import { WagmiProvider } from "wagmi";
 import { useEffect, useState } from "react";
 import { wagmiConfig } from "@/lib/wagmi";
+import { ToastProvider } from "@/components/Toast";
 
 import "@rainbow-me/rainbowkit/styles.css";
 
@@ -23,10 +24,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
             borderRadius: "medium",
           })}
         >
-          {/* Defer wallet-aware UI until client-mount to avoid WalletConnect
-              IndexedDB init during SSR (causes unhandled rejection, non-fatal
-              but pollutes logs). */}
-          {mounted ? children : <div style={{ visibility: "hidden" }}>{children}</div>}
+          <ToastProvider>
+            {/* Defer wallet-aware UI until client-mount to avoid WalletConnect
+                IndexedDB init during SSR (causes unhandled rejection, non-fatal
+                but pollutes logs). */}
+            {mounted ? children : <div style={{ visibility: "hidden" }}>{children}</div>}
+          </ToastProvider>
         </RainbowKitProvider>
       </QueryClientProvider>
     </WagmiProvider>

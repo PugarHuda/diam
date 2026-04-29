@@ -73,7 +73,11 @@ export async function publicDecryptUint256(
  * with `if (!client) return;` before invoking encrypt/decrypt.
  *
  * Note: `createViemHandleClient` is async; we resolve lazily on first use.
+ *
+ * Coverage: this hook can't run under our Vitest setup because of the React 19
+ * + pnpm + Windows two-React-copies issue documented elsewhere. Excluded.
  */
+/* v8 ignore start */
 export function useNoxClient(): {
   ready: boolean;
   getClient: () => Promise<HandleClient | null>;
@@ -96,3 +100,4 @@ export function useNoxClient(): {
     getClient,
   };
 }
+/* v8 ignore stop */

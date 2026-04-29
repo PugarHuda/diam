@@ -7,6 +7,7 @@
 
 import { publicClient, PRIVATE_OTC_ADDRESS, env } from "../config.js";
 import { privateOtcAbi } from "../abi.js";
+import { formatSettlementNotification } from "./logic.js";
 
 export async function startSettlementMonitor() {
   console.log("[settlement-monitor] starting");
@@ -21,9 +22,10 @@ export async function startSettlementMonitor() {
         const taker = log.args.taker;
         const txHash = log.transactionHash;
 
-        const message = {
-          text: `🔒 OTC settled — intent #${id?.toString()} → taker ${taker}\nhttps://sepolia.arbiscan.io/tx/${txHash}`,
-        };
+        const message = formatSettlementNotification(
+          { id, taker },
+          txHash ?? undefined,
+        );
 
         if (env.AGENT_NOTIFICATION_WEBHOOK) {
           try {

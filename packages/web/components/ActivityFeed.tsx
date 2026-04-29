@@ -65,6 +65,7 @@ export function ActivityFeed() {
         number,
         number,
         `0x${string}`,
+        `0x${string}`, // priceToPay
       ];
       return {
         id: ids[i],

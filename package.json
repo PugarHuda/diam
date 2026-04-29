@@ -9,6 +9,7 @@
     "build": "pnpm -r build",
     "test": "pnpm -r test",
     "lint": "pnpm -r lint",
+    "prepare": "husky",
     "contracts:build": "pnpm --filter contracts build",
     "contracts:test": "pnpm --filter contracts test",
     "contracts:deploy:sepolia": "pnpm --filter contracts deploy:sepolia",
@@ -17,10 +18,17 @@
   },
   "devDependencies": {
     "typescript": "^5.6.3",
-    "prettier": "^3.4.2"
+    "prettier": "^3.4.2",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.2.10"
+  },
+  "lint-staged": {
+    "packages/web/**/*.{ts,tsx}": "bash -c 'pnpm --filter web type-check'",
+    "packages/mcp-server/**/*.ts": "bash -c 'pnpm --filter mcp-server exec tsc --noEmit'",
+    "packages/agents/**/*.ts": "bash -c 'pnpm --filter agents exec tsc --noEmit'"
   },
   "engines": {
-    "node": ">=20.0.0",
+    "node": ">=22.0.0",
     "pnpm": ">=10.0.0"
   }
 }

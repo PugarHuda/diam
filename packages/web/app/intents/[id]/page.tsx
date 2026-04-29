@@ -9,6 +9,7 @@ import { AppShell } from "@/components/AppShell";
 import { PageHeader, SectionHeader } from "@/components/PageHeader";
 import { TokenIcon } from "@/components/TokenIcon";
 import { NftReceipt } from "@/components/NftReceipt";
+import { SkeletonCard } from "@/components/Skeleton";
 import { privateOtcAbi } from "@/lib/abi/privateOtc";
 import { PRIVATE_OTC_ADDRESS, CUSDC_ADDRESS, CETH_ADDRESS } from "@/lib/wagmi";
 import { useAcceptIntent, useCancelIntent } from "@/lib/hooks/useOtcWrites";
@@ -43,9 +44,20 @@ export default function IntentDetailPage({
   if (intentQuery.isLoading) {
     return (
       <AppShell>
-        <p className="font-mono text-sm text-zinc-500">
-          ⟨ FETCHING INTENT #{id} ⟩
+        <p className="text-label-caps mb-6 flex items-center gap-2 text-zinc-500">
+          <span className="material-symbols-outlined animate-spin text-base text-[--color-primary]">
+            sync
+          </span>
+          FETCHING INTENT #{id}
         </p>
+        <div className="grid grid-cols-12 gap-6">
+          <section className="col-span-12 lg:col-span-7">
+            <SkeletonCard />
+          </section>
+          <aside className="col-span-12 space-y-4 lg:col-span-5">
+            <SkeletonCard />
+          </aside>
+        </div>
       </AppShell>
     );
   }
@@ -70,6 +82,7 @@ export default function IntentDetailPage({
     number,
     number,
     `0x${string}`,
+    `0x${string}`, // priceToPay (10th field, 2-step RFQ)
   ];
 
   const intent = {

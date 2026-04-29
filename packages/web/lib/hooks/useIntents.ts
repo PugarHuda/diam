@@ -12,7 +12,7 @@ export type IntentRow = {
   sellAmountHandle: `0x${string}`;
   minBuyAmountHandle: `0x${string}`;
   deadline: bigint;
-  status: 0 | 1 | 2 | 3;
+  status: 0 | 1 | 2 | 3 | 4;
   mode: 0 | 1;
   allowedTaker: `0x${string}`;
 };
@@ -22,6 +22,7 @@ const STATUS_LABELS: Record<number, string> = {
   1: "Filled",
   2: "Cancelled",
   3: "Expired",
+  4: "Pending Reveal",
 };
 
 const MODE_LABELS: Record<number, string> = {
@@ -72,7 +73,8 @@ export function useIntents(limit = 20) {
         bigint,
         number,
         number,
-        `0x${string}`
+        `0x${string}`,
+        `0x${string}` // priceToPay (10th field added for 2-step RFQ)
       ];
       return {
         id: ids[i],
@@ -82,7 +84,7 @@ export function useIntents(limit = 20) {
         sellAmountHandle: v[3],
         minBuyAmountHandle: v[4],
         deadline: v[5],
-        status: v[6] as 0 | 1 | 2 | 3,
+        status: v[6] as 0 | 1 | 2 | 3 | 4,
         mode: v[7] as 0 | 1,
         allowedTaker: v[8],
       };

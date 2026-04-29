@@ -8,11 +8,19 @@ import { parseUnits } from "viem";
 import { AppShell } from "@/components/AppShell";
 import { PageHeader, SectionHeader } from "@/components/PageHeader";
 import { NftReceipt } from "@/components/NftReceipt";
+import { SkeletonCard } from "@/components/Skeleton";
 import { privateOtcAbi } from "@/lib/abi/privateOtc";
 import { PRIVATE_OTC_ADDRESS, CUSDC_ADDRESS, CETH_ADDRESS } from "@/lib/wagmi";
-import { useSubmitBid, useFinalizeRfq } from "@/lib/hooks/useOtcWrites";
+import {
+  useSubmitBid,
+  useFinalizeRfq,
+  useRevealRfqWinner,
+} from "@/lib/hooks/useOtcWrites";
 import { statusLabel } from "@/lib/hooks/useIntents";
 import { shortAddress } from "@/lib/utils";
+import { useToast } from "@/components/Toast";
+import { useNoxClient, decryptUint256 } from "@/lib/nox-client";
+import { formatUnits } from "viem";
 
 const TOKEN_NAMES: Record<string, { symbol: string; decimals: number }> = {
   [CUSDC_ADDRESS.toLowerCase()]: { symbol: "cUSDC", decimals: 6 },
@@ -47,9 +55,83 @@ export default function RfqDetailPage({
   const { address } = useAccount();
   const submitBid = useSubmitBid();
   const finalize = useFinalizeRfq();
+  const reveal = useRevealRfqWinner();
+  const toast = useToast();
+
+  // Surface tx outcomes via toasts as soon as state transitions.
+  useEffect(() => {
+    if (reveal.step === "done" && reveal.txHash) {
+      toast.success("Winner revealed — settlement complete", {
+        href: `https://sepolia.arbiscan.io/tx/${reveal.txHash}`,
+      });
+    } else if (reveal.step === "error" && reveal.error) {
+      toast.error(`Reveal failed: ${reveal.error}`);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reveal.step, reveal.txHash]);
+
+  useEffect(() => {
+    if (finalize.step === "done" && finalize.txHash) {
+      toast.success("Auction frozen — awaiting maker reveal", {
+        href: `https://sepolia.arbiscan.io/tx/${finalize.txHash}`,
+      });
+    } else if (finalize.step === "error" && finalize.error) {
+      toast.error(`Finalize failed: ${finalize.error}`);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [finalize.step, finalize.txHash]);
+
+  useEffect(() => {
+    if (submitBid.step === "done" && submitBid.txHash) {
+      toast.success("Sealed bid submitted", {
+        href: `https://sepolia.arbiscan.io/tx/${submitBid.txHash}`,
+      });
+    } else if (submitBid.step === "error" && submitBid.error) {
+      toast.error(`Bid failed: ${submitBid.error}`);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [submitBid.step, submitBid.txHash]);
 
   const [bidAmount, setBidAmount] = useState("");
   const [now, setNow] = useState(Math.floor(Date.now() / 1000));
+
+  // Maker-only bid decryption state. After finalizeRFQ, every bid handle is
+  // ACL-allowed for the maker via Nox.allow — we can pull plaintext amounts
+  // through the same handle client used for encryption.
+  const { ready: noxReady, getClient } = useNoxClient();
+  const [decrypted, setDecrypted] = useState<Record<number, bigint>>({});
+  const [decrypting, setDecrypting] = useState(false);
+
+  async function handleDecryptBids() {
+    if (decrypting) return;
+    setDecrypting(true);
+    try {
+      const client = await getClient();
+      if (!client) {
+        toast.error("Nox client unavailable");
+        return;
+      }
+      const out: Record<number, bigint> = {};
+      for (let i = 0; i < bids.length; i++) {
+        try {
+          out[i] = await decryptUint256(client, bids[i].handle);
+        } catch (err) {
+          toast.error(
+            `Bid #${i + 1} decryption failed: ${
+              err instanceof Error ? err.message : String(err)
+            }`,
+          );
+        }
+      }
+      setDecrypted(out);
+      const total = Object.keys(out).length;
+      if (total > 0) {
+        toast.success(`Decrypted ${total} bid${total === 1 ? "" : "s"}`);
+      }
+    } finally {
+      setDecrypting(false);
+    }
+  }
 
   useEffect(() => {
     const t = setInterval(() => setNow(Math.floor(Date.now() / 1000)), 1000);
@@ -81,9 +163,21 @@ export default function RfqDetailPage({
   if (intentQuery.isLoading) {
     return (
       <AppShell>
-        <p className="font-mono text-sm text-zinc-500">
-          ⟨ FETCHING RFQ #{id} ⟩
+        <p className="text-label-caps mb-6 flex items-center gap-2 text-zinc-500">
+          <span className="material-symbols-outlined animate-spin text-base text-[--color-primary]">
+            sync
+          </span>
+          FETCHING RFQ #{id}
         </p>
+        <div className="grid grid-cols-12 gap-6">
+          <section className="col-span-12 lg:col-span-7">
+            <SkeletonCard />
+          </section>
+          <aside className="col-span-12 space-y-4 lg:col-span-5">
+            <SkeletonCard />
+            <SkeletonCard />
+          </aside>
+        </div>
       </AppShell>
     );
   }
@@ -108,6 +202,7 @@ export default function RfqDetailPage({
     number,
     number,
     `0x${string}`,
+    `0x${string}`, // priceToPay
   ];
 
   const rfq = {
@@ -119,6 +214,7 @@ export default function RfqDetailPage({
   };
 
   const isOpen = rfq.status === 0;
+  const isPendingReveal = rfq.status === 4;
   const isExpired = Number(rfq.deadline) <= now;
   const isMaker = address && address.toLowerCase() === rfq.maker.toLowerCase();
   const buyTok = TOKEN_NAMES[rfq.buyToken.toLowerCase()];
@@ -187,7 +283,7 @@ export default function RfqDetailPage({
               finalize
             </p>
 
-            {bids.length > 0 && (
+            {bids.length > 0 ? (
               <ul className="space-y-2 border-t border-zinc-800 pt-4">
                 {bids.map((bid, i) => (
                   <li
@@ -208,6 +304,22 @@ export default function RfqDetailPage({
                   </li>
                 ))}
               </ul>
+            ) : (
+              <div className="border-t border-zinc-800 pt-6">
+                <div className="border border-dashed border-zinc-800 bg-zinc-950/40 p-8 text-center">
+                  <span
+                    className="material-symbols-outlined text-zinc-700"
+                    style={{ fontSize: "1.75rem" }}
+                  >
+                    inbox
+                  </span>
+                  <p className="mt-2 font-mono text-[11px] text-zinc-500">
+                    {isOpen && !isExpired
+                      ? "⟨ NO_BIDS_YET · be the first to seal a bid ⟩"
+                      : "⟨ NO_BIDS_RECEIVED ⟩"}
+                  </p>
+                </div>
+              </div>
             )}
           </div>
         </section>
@@ -305,11 +417,11 @@ export default function RfqDetailPage({
           {isOpen && isExpired && bids.length >= 2 && (
             <div className="glass-card border-l-2 border-l-[--color-primary] p-6">
               <p className="text-label-caps mb-2 text-[--color-primary]">
-                Ready to Finalize
+                Step 1 of 2 · Freeze Auction
               </p>
-              <p className="mb-4 font-mono text-[11px] text-zinc-500">
-                Bidding closed. Anyone can call finalize. Vickrey logic runs
-                on-chain via encrypted comparisons.
+              <p className="mb-4 font-mono text-[11px] leading-relaxed text-zinc-500">
+                Bidding closed. Anyone can compute the encrypted second-price
+                via Vickrey. Maker then reveals the winning bid index in step 2.
               </p>
               <button
                 onClick={() => finalize.submit(rfqId)}
@@ -332,8 +444,8 @@ export default function RfqDetailPage({
                 {finalize.step === "signing" && "CONFIRM IN WALLET…"}
                 {finalize.step === "confirming" && "RUNNING VICKREY…"}
                 {(finalize.step === "idle" || finalize.step === "error") &&
-                  "FINALIZE RFQ"}
-                {finalize.step === "done" && "FINALIZED"}
+                  "COMPUTE SECOND-PRICE"}
+                {finalize.step === "done" && "FROZEN — AWAITING REVEAL"}
               </button>
               {finalize.error && (
                 <p className="mt-2 font-mono text-[10px] text-[--color-danger]">
@@ -343,7 +455,165 @@ export default function RfqDetailPage({
             </div>
           )}
 
-          {!isOpen && (
+          {/* Step 2 — maker-only reveal panel */}
+          {isPendingReveal && isMaker && (() => {
+            const decryptedCount = Object.keys(decrypted).length;
+            const allDecrypted =
+              bids.length > 0 && decryptedCount === bids.length;
+            const highestIdx = allDecrypted
+              ? bids
+                  .map((_, i) => i)
+                  .reduce((best, i) =>
+                    (decrypted[i] ?? 0n) > (decrypted[best] ?? 0n) ? i : best,
+                  )
+              : -1;
+
+            return (
+              <div className="glass-card border-l-2 border-l-amber-400 p-6">
+                <p className="text-label-caps mb-2 flex items-center gap-2 text-amber-400">
+                  <span className="h-1.5 w-1.5 animate-pulse bg-amber-400" />
+                  Step 2 of 2 · Reveal Winner
+                </p>
+                <p className="mb-4 font-mono text-[11px] leading-relaxed text-zinc-500">
+                  Auction frozen. As maker, every bid handle is{" "}
+                  <span className="text-amber-400">ACL-allowed</span> for your
+                  wallet. Decrypt below to see plaintext amounts, then pick the
+                  highest bidder.
+                </p>
+
+                {bids.length > 0 ? (
+                  <>
+                    <button
+                      onClick={handleDecryptBids}
+                      disabled={!noxReady || decrypting || allDecrypted}
+                      className="text-label-caps mb-3 flex w-full items-center justify-center gap-2 border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-amber-400 transition hover:bg-amber-400/20 disabled:opacity-40"
+                    >
+                      <span
+                        className={`material-symbols-outlined text-base ${
+                          decrypting ? "animate-spin" : ""
+                        }`}
+                      >
+                        {decrypting
+                          ? "sync"
+                          : allDecrypted
+                            ? "check_circle"
+                            : "lock_open"}
+                      </span>
+                      {decrypting
+                        ? "DECRYPTING…"
+                        : allDecrypted
+                          ? `${decryptedCount} bids decrypted`
+                          : !noxReady
+                            ? "WALLET NOT READY"
+                            : `Decrypt ${bids.length} bid${bids.length === 1 ? "" : "s"} via Nox`}
+                    </button>
+
+                    <ul className="mb-4 space-y-2">
+                      {bids.map((bid, i) => {
+                        const amount = decrypted[i];
+                        const isHighest = i === highestIdx;
+                        return (
+                          <li
+                            key={i}
+                            className={`flex items-center justify-between border p-3 transition ${
+                              isHighest
+                                ? "border-amber-400 bg-amber-400/5"
+                                : "border-zinc-800 bg-zinc-900/40"
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <span className="font-mono text-[10px] text-zinc-600">
+                                #{(i + 1).toString().padStart(2, "0")}
+                              </span>
+                              <div className="flex flex-col gap-0.5">
+                                <span className="font-mono text-xs">
+                                  {shortAddress(bid.taker, 6)}
+                                </span>
+                                {amount !== undefined ? (
+                                  <span
+                                    className={`font-mono text-[11px] ${
+                                      isHighest
+                                        ? "text-amber-400"
+                                        : "text-zinc-400"
+                                    }`}
+                                  >
+                                    {buyTok
+                                      ? formatUnits(amount, buyTok.decimals)
+                                      : amount.toString()}{" "}
+                                    {buyTok?.symbol ?? ""}
+                                    {isHighest && " · highest"}
+                                  </span>
+                                ) : (
+                                  <span className="font-mono text-[10px] text-zinc-600">
+                                    {bid.handle.slice(0, 14)}…[encrypted]
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => reveal.submit(rfqId, BigInt(i))}
+                              disabled={
+                                !allDecrypted ||
+                                reveal.step === "signing" ||
+                                reveal.step === "confirming"
+                              }
+                              className={`text-label-caps border px-3 py-1.5 transition disabled:opacity-40 ${
+                                isHighest
+                                  ? "border-amber-400 bg-amber-400/20 text-amber-300 hover:bg-amber-400/30"
+                                  : "border-amber-400/40 bg-amber-400/10 text-amber-400 hover:bg-amber-400/20"
+                              }`}
+                              title={
+                                allDecrypted
+                                  ? "Settle to this bidder"
+                                  : "Decrypt bids first"
+                              }
+                            >
+                              Pick as winner
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </>
+                ) : (
+                  <p className="font-mono text-[11px] text-zinc-500">
+                    No bids on this RFQ — nothing to reveal.
+                  </p>
+                )}
+
+                {reveal.step !== "idle" && (
+                  <p className="font-mono text-[10px] text-zinc-500">
+                    {reveal.step === "signing" && "→ confirm in wallet…"}
+                    {reveal.step === "confirming" && "→ submitting reveal…"}
+                    {reveal.step === "done" && "✓ winner revealed — settling"}
+                    {reveal.step === "error" && (
+                      <span className="text-[--color-danger]">
+                        ✕ {reveal.error}
+                      </span>
+                    )}
+                  </p>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* Non-maker view of PendingReveal — informational */}
+          {isPendingReveal && !isMaker && (
+            <div className="glass-card border-l-2 border-l-amber-400 p-6">
+              <p className="text-label-caps mb-2 flex items-center gap-2 text-amber-400">
+                <span className="h-1.5 w-1.5 animate-pulse bg-amber-400" />
+                Awaiting Maker Reveal
+              </p>
+              <p className="font-mono text-[11px] leading-relaxed text-zinc-500">
+                The Vickrey second-price has been computed and is encrypted
+                on-chain. The maker is decrypting bid amounts off-chain to
+                identify the actual winner. Settlement will trigger
+                automatically once they reveal.
+              </p>
+            </div>
+          )}
+
+          {!isOpen && !isPendingReveal && (
             <div className="glass-card p-6">
               <p className="font-mono text-sm text-zinc-500">
                 ⟨ RFQ {statusLabel(rfq.status).toUpperCase()} ⟩
@@ -351,12 +621,12 @@ export default function RfqDetailPage({
             </div>
           )}
 
-          {(rfq.status === 1 || finalize.step === "done") && (
+          {(rfq.status === 1 || reveal.step === "done") && (
             <NftReceipt
               pair={`${sellSym}/${buyTok?.symbol ?? "?"}`}
               intentId={id}
               mode="RFQ"
-              txHash={finalize.txHash ?? undefined}
+              txHash={reveal.txHash ?? finalize.txHash ?? undefined}
               makerAddress={rfq.maker}
               timestamp={Date.now()}
             />

@@ -29,10 +29,13 @@ import { arbitrumSepolia } from "viem/chains";
 import { createViemHandleClient } from "@iexec-nox/handle";
 
 const ADDRESSES = {
-  privateOtc: "0x5b2C0c83e41bF9ef072d742096C49DFDB814CEB4" as `0x${string}`,
-  cusdc: "0x57736B816F6cb53c6B2c742D3A162E89Db162ADE" as `0x${string}`,
-  ceth: "0xCdD84bA9415DFE3Dd5c0c05077B1FE194Bcf695d" as `0x${string}`,
+  privateOtc: process.env.NEXT_PUBLIC_PRIVATE_OTC_ADDRESS as `0x${string}`,
+  cusdc: process.env.NEXT_PUBLIC_CUSDC_ADDRESS as `0x${string}`,
+  ceth: process.env.NEXT_PUBLIC_CETH_ADDRESS as `0x${string}`,
 };
+if (!ADDRESSES.privateOtc || !ADDRESSES.cusdc || !ADDRESSES.ceth) {
+  throw new Error("Set NEXT_PUBLIC_*_ADDRESS env vars");
+}
 
 const cTokenAbi = parseAbi([
   "function faucet(bytes32 amountHandle, bytes amountProof)",

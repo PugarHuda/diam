@@ -1,29 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAccount, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { useNoxClient, encryptUint256 } from "@/lib/nox-client";
+import { executeFaucet, type FaucetStep } from "./useFaucet.logic";
 
-const FAUCET_ABI = [
-  {
-    type: "function",
-    name: "faucet",
-    stateMutability: "nonpayable",
-    inputs: [
-      { name: "amountHandle", type: "bytes32" },
-      { name: "amountProof", type: "bytes" },
-    ],
-    outputs: [],
-  },
-] as const;
-
-export type FaucetStep =
-  | "idle"
-  | "encrypting"
-  | "signing"
-  | "confirming"
-  | "done"
-  | "error";
+export type { FaucetStep };
 
 export function useFaucet() {
   const { address } = useAccount();
@@ -36,35 +18,26 @@ export function useFaucet() {
 
   const receipt = useWaitForTransactionReceipt({ hash: txHash ?? undefined });
 
-  if (receipt.isSuccess && step === "confirming") {
-    setStep("done");
-  }
+  useEffect(() => {
+    if (receipt.isSuccess && step === "confirming") {
+      setStep("done");
+    }
+  }, [receipt.isSuccess, step]);
 
   async function mint(tokenAddress: `0x${string}`, amount: bigint) {
-    if (!address) throw new Error("Wallet not connected");
-    if (!ready) throw new Error("Nox client not ready");
-    setError(null);
-
-    try {
-      setStep("encrypting");
-      const client = await getClient();
-      if (!client) throw new Error("Nox client unavailable");
-
-      const enc = await encryptUint256(client, amount, tokenAddress);
-
-      setStep("signing");
-      const hash = await writeContractAsync({
-        address: tokenAddress,
-        abi: FAUCET_ABI,
-        functionName: "faucet",
-        args: [enc.handle as `0x${string}`, enc.proof],
-      });
-      setTxHash(hash);
-      setStep("confirming");
-    } catch (err) {
-      setStep("error");
-      setError(err instanceof Error ? err.message : String(err));
-    }
+    return executeFaucet(
+      {
+        address,
+        noxReady: ready,
+        getClient,
+        encryptAmount: encryptUint256,
+        writeContractAsync: writeContractAsync as (
+          args: unknown,
+        ) => Promise<`0x${string}`>,
+      },
+      { tokenAddress, amount },
+      { onStep: setStep, onError: setError, onTxHash: setTxHash },
+    );
   }
 
   return { mint, step, error, txHash };

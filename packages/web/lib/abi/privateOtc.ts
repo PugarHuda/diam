@@ -1,10 +1,13 @@
 /**
  * Minimal ABI for PrivateOTC contract — only the fragments the frontend uses.
  *
- * Why hand-curated instead of full JSON?
- *   - Smaller bundle: ship only what we call
+ * Why hand-curated per-package (web/agents/mcp-server) instead of one shared?
+ *   - Smaller bundle: ship only what each consumer calls
  *   - Tree-shakable: viem can verify call shapes at compile time
- *   - Stable: rebuilds of contracts don't churn the frontend bundle
+ *   - Stable: rebuilds of contracts don't churn unrelated packages
+ *
+ * Trade-off: keep these in sync manually when adding contract methods. Each
+ * package's lint/typecheck will surface mismatches against actual usage.
  *
  * To regenerate after contract changes, look at:
  *   ../packages/contracts/out/PrivateOTC.sol/PrivateOTC.json
@@ -91,6 +94,7 @@ export const privateOtcAbi = [
       { name: "status", type: "uint8" },
       { name: "mode", type: "uint8" },
       { name: "allowedTaker", type: "address" },
+      { name: "priceToPay", type: "bytes32" },
     ],
   },
   {
@@ -133,7 +137,22 @@ export const privateOtcAbi = [
     name: "Cancelled",
     inputs: [{ name: "id", type: "uint256", indexed: true }],
   },
+  {
+    type: "event",
+    name: "RFQPendingReveal",
+    inputs: [{ name: "id", type: "uint256", indexed: true }],
+  },
+  {
+    type: "function",
+    name: "revealRFQWinner",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "id", type: "uint256" },
+      { name: "winnerIdx", type: "uint256" },
+    ],
+    outputs: [],
+  },
 ] as const;
 
-export type IntentStatus = 0 | 1 | 2 | 3; // Open | Filled | Cancelled | Expired
+export type IntentStatus = 0 | 1 | 2 | 3 | 4; // Open | Filled | Cancelled | Expired | PendingReveal
 export type Mode = 0 | 1; // Direct | RFQ

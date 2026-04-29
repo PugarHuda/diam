@@ -1,5 +1,7 @@
 # Diam
 
+[![Tests](https://github.com/PugarHuda/diam/actions/workflows/test.yml/badge.svg)](https://github.com/PugarHuda/diam/actions/workflows/test.yml)
+
 > **Your trade. Their guess. Nobody knows.**
 
 `diam` — Indonesian for *"silent"*. A confidential OTC desk where amounts stay hidden, bids stay sealed, and trades stay quiet.
@@ -38,26 +40,46 @@ Diam is the third option: **on-chain OTC where amounts are encrypted end-to-end*
 
 ## Three-Layer Architecture
 
+```mermaid
+flowchart TB
+    subgraph "🤖 MCP Plugin Layer"
+        Claude[Claude Code / Cursor / ChainGPT AI]
+        MCPSrv[MCP Server<br/><i>private-otc-mcp</i>]
+        Claude -->|stdio prompts| MCPSrv
+        MCPSrv -.->|browse_intents<br/>create_intent<br/>decrypt_balance| ContractsAPI
+    end
+
+    subgraph "⚙️ Compound Engineering Layer"
+        MM[MarketMaker<br/><i>auto-bid on RFQs</i>]
+        SW[RFQ Sweeper<br/><i>finalize expired</i>]
+        SM[Settlement Monitor<br/><i>webhook on Settled</i>]
+        SC[Strategy Coach<br/><i>daily AI digest</i>]
+        MM & SW & SM & SC -.->|viem<br/>watchContractEvent| ContractsAPI
+    end
+
+    subgraph "🔒 Core Protocol"
+        Web[Next.js 16 Frontend<br/><i>wagmi · RainbowKit</i>]
+        ContractsAPI[PrivateOTC.sol<br/>+ DiamCToken cUSDC/cETH<br/><i>Arbitrum Sepolia</i>]
+        Web --> ContractsAPI
+    end
+
+    subgraph "🌐 External Services"
+        Nox[iExec Nox<br/><i>NoxCompute TEE precompile</i>]
+        CGT[ChainGPT API<br/><i>auditor · fair price · NFT receipts</i>]
+        ContractsAPI <-->|encrypted ops<br/>Nox.gt · Nox.select<br/>Nox.transfer| Nox
+        Web -.-> CGT
+        SC -.-> CGT
+    end
+
+    style ContractsAPI fill:#0a0a0a,stroke:#00ff41,stroke-width:2px,color:#00ff41
+    style Nox fill:#0a0a0a,stroke:#7c3aed,stroke-width:2px,color:#7c3aed
+    style CGT fill:#0a0a0a,stroke:#ff6b6b,stroke-width:1px,color:#ff6b6b
 ```
-┌─────────────────────────────────────────┐
-│  MCP Plugin Layer                       │
-│  AI agents (Claude / Cursor / ChainGPT) │ ──► Trade through Diam
-│  call Diam via standardized MCP tools   │     with one prompt
-└─────────────────────────────────────────┘
-                  ▼
-┌─────────────────────────────────────────┐
-│  Compound Engineering Layer             │
-│  Autonomous agents: MarketMaker,        │ ──► Long-running bots
-│  Settlement Monitor, Strategy Coach,    │     bid, sweep, analyze
-│  RFQ Sweeper                            │
-└─────────────────────────────────────────┘
-                  ▼
-┌─────────────────────────────────────────┐
-│  Core Protocol                          │
-│  Solidity (Nox library) + Next.js UI    │ ──► Direct OTC + Vickrey
-│  ERC-7984 cToken settlements            │     RFQ on Arbitrum
-└─────────────────────────────────────────┘
-```
+
+**Reading the diagram:**
+- **Solid arrows** are write paths (transactions, RPC calls).
+- **Dotted arrows** are read paths or AI-only side channels.
+- The Core Protocol is the only layer with on-chain authority; everything else is composition.
 
 ---
 

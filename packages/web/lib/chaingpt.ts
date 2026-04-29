@@ -12,7 +12,29 @@
  * Free hackathon credits via Telegram @vladnazarxyz
  */
 
+import { safeDeltaBps } from "./precision";
+
 const CHAINGPT_BASE_URL = "https://api.chaingpt.org";
+
+/**
+ * Parse a JSON object from a ChainGPT response that may or may not be wrapped
+ * in markdown code fences. Returns null on any failure (regex miss, malformed
+ * JSON, throw inside parse). Used by checkFairPrice + getMarketSignal so both
+ * failure-mode behaviors stay identical.
+ */
+export function parseFencedJson<T>(raw: string): T | null {
+  try {
+    const cleaned = raw
+      .replace(/```json\s*/gi, "")
+      .replace(/```\s*$/g, "")
+      .trim();
+    const match = cleaned.match(/\{[\s\S]*?\}/);
+    if (!match) return null;
+    return JSON.parse(match[0]) as T;
+  } catch {
+    return null;
+  }
+}
 
 export type ChainGPTModel =
   | "general_assistant"
@@ -137,30 +159,18 @@ export async function checkFairPrice(
 
   let fairPriceUsd = yourPriceUsd;
   let rationale = "ChainGPT response could not be parsed";
-  try {
-    const cleaned = raw
-      .replace(/```json\s*/gi, "")
-      .replace(/```\s*$/g, "")
-      .trim();
-    const match = cleaned.match(/\{[\s\S]*?\}/);
-    if (match) {
-      const parsed = JSON.parse(match[0]) as {
-        fairPriceUsd: number;
-        rationale: string;
-      };
-      if (typeof parsed.fairPriceUsd === "number") {
-        fairPriceUsd = parsed.fairPriceUsd;
-      }
-      if (parsed.rationale) rationale = parsed.rationale;
+
+  const parsed = parseFencedJson<{ fairPriceUsd: number; rationale: string }>(
+    raw,
+  );
+  if (parsed) {
+    if (typeof parsed.fairPriceUsd === "number") {
+      fairPriceUsd = parsed.fairPriceUsd;
     }
-  } catch {
-    // Fall through with defaults
+    if (parsed.rationale) rationale = parsed.rationale;
   }
 
-  const deltaBps =
-    fairPriceUsd > 0
-      ? Math.round(((yourPriceUsd - fairPriceUsd) / fairPriceUsd) * 10000)
-      : 0;
+  const deltaBps = safeDeltaBps(yourPriceUsd, fairPriceUsd) ?? 0;
   const warning =
     Math.abs(deltaBps) > 500
       ? `Your price is ${(deltaBps / 100).toFixed(1)}% off market — confirm intent`
@@ -190,20 +200,11 @@ export async function getMarketSignal(pair: string): Promise<MarketSignal> {
   let confidence: MarketSignal["confidence"] = "low";
   let rationale = "ChainGPT response could not be parsed";
 
-  try {
-    const cleaned = raw
-      .replace(/```json\s*/gi, "")
-      .replace(/```\s*$/g, "")
-      .trim();
-    const match = cleaned.match(/\{[\s\S]*?\}/);
-    if (match) {
-      const parsed = JSON.parse(match[0]) as Partial<MarketSignal>;
-      if (parsed.bias) bias = parsed.bias;
-      if (parsed.confidence) confidence = parsed.confidence;
-      if (parsed.rationale) rationale = parsed.rationale;
-    }
-  } catch {
-    /* fallthrough */
+  const parsed = parseFencedJson<Partial<MarketSignal>>(raw);
+  if (parsed) {
+    if (parsed.bias) bias = parsed.bias;
+    if (parsed.confidence) confidence = parsed.confidence;
+    if (parsed.rationale) rationale = parsed.rationale;
   }
 
   return { pair, bias, confidence, rationale };

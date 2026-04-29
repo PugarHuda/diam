@@ -10,7 +10,8 @@ interface IPrivateOTC {
         Open,
         Filled,
         Cancelled,
-        Expired
+        Expired,
+        PendingReveal
     }
 
     enum Mode {
@@ -24,6 +25,7 @@ interface IPrivateOTC {
     event BidSubmitted(uint256 indexed id, address indexed taker);
     event Settled(uint256 indexed id, address indexed taker);
     event Cancelled(uint256 indexed id);
+    event RFQPendingReveal(uint256 indexed id);
 
     /// @notice Create a Direct OTC intent (1 maker ↔ 1 taker)
     function createIntent(
@@ -55,6 +57,11 @@ interface IPrivateOTC {
     /// @notice Submit a sealed bid to an RFQ
     function submitBid(uint256 id, externalEuint256 bidAmountHandle, bytes calldata bidProof) external;
 
-    /// @notice Finalize an RFQ — picks winner via Vickrey (winner pays second-highest)
+    /// @notice Step 1 of 2: freeze RFQ + compute encrypted second-highest price.
+    /// Anyone can call after the bidding deadline. Status → PendingReveal.
     function finalizeRFQ(uint256 id) external;
+
+    /// @notice Step 2 of 2: maker reveals winner (decrypted off-chain) and
+    /// settlement runs at the encrypted second-price. Status → Filled.
+    function revealRFQWinner(uint256 id, uint256 winnerIdx) external;
 }

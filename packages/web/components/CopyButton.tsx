@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useToast } from "./Toast";
 
 /**
  * Inline copy-to-clipboard button. Shows checkmark for 1.5s on success.
@@ -17,6 +18,7 @@ export function CopyButton({
   size?: "sm" | "md";
 }) {
   const [copied, setCopied] = useState(false);
+  const toast = useToast();
 
   async function handleCopy(e: React.MouseEvent) {
     e.preventDefault();
@@ -25,8 +27,11 @@ export function CopyButton({
       await navigator.clipboard.writeText(value);
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
+      toast.success(
+        `Copied ${label ?? value.slice(0, 14) + "…"} to clipboard`,
+      );
     } catch {
-      // Clipboard access denied — fallback noop
+      toast.error("Clipboard access denied");
     }
   }
 
