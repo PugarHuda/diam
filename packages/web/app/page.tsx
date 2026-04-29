@@ -12,6 +12,7 @@ import {
   TerminalCardHeader,
 } from "@/components/TerminalAnnotations";
 import { LatestIntentPreview } from "@/components/LatestIntentPreview";
+import { DiamLogo } from "@/components/DiamLogo";
 
 // Read directly from process.env — this page is a Server Component, and
 // importing lib/wagmi (which calls RainbowKit's client-only getDefaultConfig)
@@ -312,8 +313,11 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="flex flex-col items-center justify-between border-t border-zinc-900 pt-6 text-label-caps text-zinc-600 md:flex-row">
-            <span>© 2026 DIAM PROTOCOL · CONFIDENTIAL LAYER ON IEXEC NOX</span>
+          <div className="flex flex-col items-center justify-between gap-3 border-t border-zinc-900 pt-6 text-label-caps text-zinc-600 md:flex-row">
+            <span className="flex items-center gap-2.5">
+              <DiamLogo size={18} className="text-[--color-primary]/80" />
+              © 2026 DIAM PROTOCOL · CONFIDENTIAL LAYER ON IEXEC NOX
+            </span>
             <span className="mt-2 md:mt-0">v0.1.0 · BUILT WITH CLAUDE CODE</span>
           </div>
         </div>

@@ -21,7 +21,13 @@ export const metadata: Metadata = {
   description:
     "Institutional-grade dark pool. On-chain OTC with hidden amounts and Vickrey-fair RFQ pricing, built on iExec Nox.",
   openGraph: {
-    title: "Diam",
+    title: "Diam — Confidential OTC Desk",
+    description: "Your trade. Their guess. Nobody knows.",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Diam — Confidential OTC Desk",
     description: "Your trade. Their guess. Nobody knows.",
   },
 };

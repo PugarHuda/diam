@@ -6,6 +6,7 @@ import type { Route } from "next";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { NetworkBadge } from "./NetworkBadge";
 import { MobileMenu } from "./MobileMenu";
+import { DiamLogo } from "./DiamLogo";
 
 const NAV: { href: Route; label: string; icon: string }[] = [
   { href: "/intents", label: "Trade", icon: "swap_horiz" },
@@ -22,12 +23,7 @@ export function Header() {
         href={"/" as Route}
         className="flex items-center gap-2.5 transition-opacity hover:opacity-80"
       >
-        <span
-          className="material-symbols-outlined text-2xl text-[--color-primary]"
-          style={{ fontVariationSettings: "'FILL' 1" }}
-        >
-          encrypted
-        </span>
+        <DiamLogo size={26} className="text-[--color-primary]" />
         <span className="font-display text-xl font-bold tracking-tighter text-[--color-primary]">
           DIAM
         </span>
