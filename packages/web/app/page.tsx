@@ -185,7 +185,7 @@ export default function HomePage() {
               rel="noreferrer"
               className="transition-colors hover:text-[--color-primary]"
             >
-              CONTRACT: 0x32C6…3FF5
+              CONTRACT: {PRIVATE_OTC_ADDRESS.slice(0, 6)}…{PRIVATE_OTC_ADDRESS.slice(-4)}
             </a>
             <a
               href="https://sepolia.arbiscan.io/address/0xd464B198f06756a1d00be223634b85E0a731c229"
