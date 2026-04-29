@@ -11,11 +11,16 @@ import {
   HeroAnnotations,
   TerminalCardHeader,
 } from "@/components/TerminalAnnotations";
-import {
-  PRIVATE_OTC_ADDRESS,
-  CUSDC_ADDRESS,
-  CETH_ADDRESS,
-} from "@/lib/wagmi";
+
+// Read directly from process.env — this page is a Server Component, and
+// importing lib/wagmi (which calls RainbowKit's client-only getDefaultConfig)
+// fails the build's static page collection step.
+const PRIVATE_OTC_ADDRESS = (process.env.NEXT_PUBLIC_PRIVATE_OTC_ADDRESS ??
+  "0x0") as `0x${string}`;
+const CUSDC_ADDRESS = (process.env.NEXT_PUBLIC_CUSDC_ADDRESS ??
+  "0x0") as `0x${string}`;
+const CETH_ADDRESS = (process.env.NEXT_PUBLIC_CETH_ADDRESS ??
+  "0x0") as `0x${string}`;
 
 export default function HomePage() {
   return (
