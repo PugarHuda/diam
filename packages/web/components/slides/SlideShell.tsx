@@ -6,26 +6,39 @@ type Props = {
   index: number;
   total: number;
   marker?: string;
+  /** Recommended speaking time for this slide, seconds. */
+  budgetSec: number;
+  /** Live elapsed time on the current slide, seconds. */
+  slideElapsedSec: number;
+  /** Live elapsed time across the whole pitch, seconds. */
+  totalElapsedSec: number;
+  /** Whether the user has timer HUD turned on (toggled with `T`). */
+  timerVisible: boolean;
   children: React.ReactNode;
-  /** Background variant. Default = grid + scanline. */
   bg?: "default" | "plain";
 };
 
-/**
- * Shared chrome for every slide: progress bar, slide counter, brand mark,
- * and a `[ ## / ## · MARKER ]` ribbon at the top-right.
- *
- * Slide content lives in `children` and is centered in a 16:9-ish viewport.
- * Each slide author only writes the actual content; layout + nav lives here.
- */
 export function SlideShell({
   index,
   total,
   marker,
+  budgetSec,
+  slideElapsedSec,
+  totalElapsedSec,
+  timerVisible,
   children,
   bg = "default",
 }: Props) {
   const progress = ((index + 1) / total) * 100;
+
+  // Color tier for slide timer. 0-79% = neutral, 80-99% = warning, ≥100% = danger.
+  const ratio = budgetSec > 0 ? slideElapsedSec / budgetSec : 0;
+  const slideTimerClass =
+    ratio >= 1
+      ? "text-[--color-danger]"
+      : ratio >= 0.8
+        ? "text-[--color-warning]"
+        : "text-zinc-300";
 
   return (
     <section
@@ -53,15 +66,31 @@ export function SlideShell({
         </span>
       </div>
 
-      <div className="absolute right-8 top-6 z-20 flex items-center gap-3 font-mono text-[10px] tracking-[0.3em] text-zinc-500 md:right-12">
-        <span data-numeric>
-          {String(index + 1).padStart(2, "0")} / {String(total).padStart(2, "0")}
-        </span>
-        {marker && (
-          <>
-            <span className="text-zinc-700">·</span>
-            <span className="text-[--color-primary]/70">{marker}</span>
-          </>
+      <div className="absolute right-8 top-6 z-20 flex flex-col items-end gap-1 font-mono text-[10px] tracking-[0.3em] md:right-12">
+        <div className="flex items-center gap-3 text-zinc-500">
+          <span data-numeric>
+            {String(index + 1).padStart(2, "0")} /{" "}
+            {String(total).padStart(2, "0")}
+          </span>
+          {marker && (
+            <>
+              <span className="text-zinc-700">·</span>
+              <span className="text-[--color-primary]/70">{marker}</span>
+            </>
+          )}
+        </div>
+
+        {timerVisible && (
+          <div
+            className="flex items-center gap-3 text-[9px] tracking-[0.25em]"
+            data-numeric
+          >
+            <span className={slideTimerClass}>
+              SLIDE {fmt(slideElapsedSec)} / {fmt(budgetSec)}
+            </span>
+            <span className="text-zinc-800">·</span>
+            <span className="text-zinc-500">TOTAL {fmt(totalElapsedSec)}</span>
+          </div>
         )}
       </div>
 
@@ -74,8 +103,19 @@ export function SlideShell({
         <span className="text-zinc-800">·</span>
         <span>F FULLSCREEN</span>
         <span className="text-zinc-800">·</span>
+        <span>T TIMER</span>
+        <span className="text-zinc-800">·</span>
+        <span>R RESET</span>
+        <span className="text-zinc-800">·</span>
         <span>ESC EXIT</span>
       </div>
     </section>
   );
+}
+
+function fmt(sec: number): string {
+  const safe = Math.max(0, Math.floor(sec));
+  const m = Math.floor(safe / 60);
+  const s = safe % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
 }
