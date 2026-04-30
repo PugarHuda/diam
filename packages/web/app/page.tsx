@@ -87,6 +87,16 @@ export default function HomePage() {
                   </span>
                 </button>
               </a>
+              <Link href={"/slides" as Route}>
+                <button className="diam-btn-secondary px-8 py-4 text-sm">
+                  <span className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-base">
+                      slideshow
+                    </span>
+                    View Pitch
+                  </span>
+                </button>
+              </Link>
             </div>
           </div>
 

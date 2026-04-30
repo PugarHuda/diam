@@ -25,7 +25,35 @@ Confidential OTC desk where the trade amount stays sealed on-chain.
 
 ---
 
-## Vision — SHORT (≈ 80 words, for character-limited fields)
+## Vision — 256-char limit (paste this if the form caps at 256)
+
+**Recommended (222 chars):**
+
+```
+Confidential OTC on iExec Nox. Trade amounts stay encrypted on-chain via TEE; a sealed-bid Vickrey RFQ settles without leaking losing bids. Institutional size privacy, fully on-chain. Your trade. Their guess. Nobody knows.
+```
+
+**Backup options at varying lengths:**
+
+| Char | Use when |
+|---|---|
+| 125 | Tagline / hero one-liner field |
+| 153 | Twitter bio length |
+| 175 | If you want to drop the "Your trade. Their guess." cadence |
+| **222** ★ | Primary 256-char Vision field — recommended |
+| 229 | Same as 222 but explicitly leads with "Diam is a…" |
+
+```
+125: Confidential OTC on iExec Nox. Encrypted amounts, sealed Vickrey bids, fully on-chain. Your trade. Their guess. Nobody knows.
+
+153: Diam: confidential OTC on iExec Nox. Encrypted order amounts + sealed-bid Vickrey RFQ that hides losing bids. Institutional size privacy, fully on-chain.
+
+175: Confidential OTC on iExec Nox. Order amounts stay encrypted on-chain; a sealed-bid Vickrey RFQ settles without leaking losing bids. Institutional size privacy, fully on-chain.
+
+229: Diam is a confidential OTC desk on iExec Nox. Order amounts stay encrypted on-chain; a sealed-bid Vickrey RFQ settles without leaking losing bids. Institutional size privacy, fully on-chain. Your trade. Their guess. Nobody knows.
+```
+
+## Vision — SHORT (≈ 80 words, for fields with looser limits)
 
 > On-chain OTC desks leak everything: order size, side, and price all sit in plaintext, so every MEV bot and competing desk sees the trade the moment it lands. That is why >95% of institutional OTC volume still happens off-chain on Telegram and centralized desks. **Diam** is a confidential OTC desk on iExec Nox that keeps the trade amount encrypted *on-chain* through TEE-backed `euint256` handles, and runs a sealed-bid Vickrey RFQ whose winner and clearing price are computed entirely on encrypted handles — only the result is revealed.
 
