@@ -69,6 +69,34 @@ export default function IntentDetailPage({
     args: [intentId],
   });
 
+  // Derive token + maker addresses up-front (BEFORE any early return) so
+  // the operator-status hooks below get a stable hook call order across
+  // every render — Rules of Hooks. They tolerate undefined inputs via
+  // their internal `enabled` guards.
+  const intentTuple = intentQuery.data as
+    | readonly [
+        `0x${string}`,
+        `0x${string}`,
+        `0x${string}`,
+        `0x${string}`,
+        `0x${string}`,
+        bigint,
+        number,
+        number,
+        `0x${string}`,
+        `0x${string}`,
+      ]
+    | undefined;
+  const intentMaker = intentTuple?.[0];
+  const intentSellToken = intentTuple?.[1];
+  const intentBuyToken = intentTuple?.[2];
+
+  // Settlement requires BOTH parties' operator auth on their respective
+  // sides. Read both — surface the failure mode before the user pays
+  // gas for a doomed accept.
+  const takerBuyAuth = useSetOperator(intentBuyToken, address);
+  const makerSellAuth = useIsOperator(intentSellToken, intentMaker);
+
   if (intentQuery.isLoading) {
     return (
       <AppShell>
@@ -131,13 +159,6 @@ export default function IntentDetailPage({
   const isExpired = Number(intent.deadline) <= Math.floor(Date.now() / 1000);
   const buyTok = TOKEN_NAMES[intent.buyToken.toLowerCase()];
   const sellTok = TOKEN_NAMES[intent.sellToken.toLowerCase()];
-
-  // Both sides must have authorized OTC as operator before settlement
-  // can succeed. Read both holder×token states up-front so we can
-  // surface the failure mode (and disable submit) before the user
-  // pays gas for a doomed tx.
-  const takerBuyAuth = useSetOperator(intent.buyToken, address);
-  const makerSellAuth = useIsOperator(intent.sellToken, intent.maker);
   const settleReady =
     takerBuyAuth.isOperator && makerSellAuth.isOperator !== false;
 

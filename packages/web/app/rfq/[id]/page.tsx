@@ -208,6 +208,35 @@ export default function RfqDetailPage({
     return r.result as boolean;
   });
 
+  // Maker reveal needs maker's sellToken authorization. Read up-front
+  // (Rules of Hooks: hook order must be stable across renders, can't
+  // sit after the early-return loading branch). The hook tolerates
+  // undefined inputs via its internal `enabled` guard.
+  const intentTuple = intentQuery.data as
+    | readonly [
+        `0x${string}`,
+        `0x${string}`,
+        `0x${string}`,
+        `0x${string}`,
+        `0x${string}`,
+        bigint,
+        number,
+        number,
+        `0x${string}`,
+        `0x${string}`,
+      ]
+    | undefined;
+  const intentMakerForRead = intentTuple?.[0];
+  const intentSellTokenForRead = intentTuple?.[1];
+  const isMakerForRead =
+    address &&
+    intentMakerForRead &&
+    address.toLowerCase() === intentMakerForRead.toLowerCase();
+  const makerSellAuth = useSetOperator(
+    intentSellTokenForRead,
+    isMakerForRead ? address : undefined,
+  );
+
   if (intentQuery.isLoading) {
     return (
       <AppShell>
@@ -268,14 +297,6 @@ export default function RfqDetailPage({
   const buyTok = TOKEN_NAMES[rfq.buyToken.toLowerCase()];
   const sellTok = TOKEN_NAMES[rfq.sellToken.toLowerCase()];
   const sellSym = sellTok?.symbol ?? shortAddress(rfq.sellToken);
-
-  // Maker reveal flow needs maker's sellToken authorization. If missing,
-  // surface an OperatorAuth banner so they can fix it before picking
-  // a winner — otherwise revealRFQWinner reverts.
-  const makerSellAuth = useSetOperator(
-    rfq.sellToken,
-    isMaker ? address : undefined,
-  );
 
   const remaining = Number(rfq.deadline) - now;
 
