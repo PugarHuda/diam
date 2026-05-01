@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { Route } from "next";
-import { useState, useMemo, useEffect } from "react";
+import { Suspense, useState, useMemo, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAccount } from "wagmi";
 import { AppShell } from "@/components/AppShell";
@@ -41,7 +41,47 @@ function parseEnum<T extends string>(
   return values.includes(raw as T) ? (raw as T) : fallback;
 }
 
+// Wrapper: useSearchParams() requires a Suspense boundary so Next.js can
+// stream the rest of the page during prerender while waiting for the
+// search params to resolve on the client.
 export default function IntentsPage() {
+  return (
+    <Suspense fallback={<IntentsLoadingSkeleton />}>
+      <IntentsPageContent />
+    </Suspense>
+  );
+}
+
+function IntentsLoadingSkeleton() {
+  return (
+    <AppShell>
+      <PageHeader
+        icon="grid_view"
+        title="ACTIVE INTENTS"
+        subtitle="ASSET_PAIRS_VISIBLE | AMOUNTS_ENCRYPTED"
+      />
+      <div className="glass-card overflow-hidden">
+        <div className="flex items-center justify-between border-b border-zinc-800 p-6">
+          <div className="flex items-center gap-2 font-mono text-xs text-zinc-500">
+            <span className="material-symbols-outlined animate-spin text-base text-[--color-primary]">
+              sync
+            </span>
+            FETCHING ON-CHAIN INTENTS
+          </div>
+        </div>
+        <table className="w-full">
+          <tbody className="divide-y divide-zinc-800/50">
+            <SkeletonRow />
+            <SkeletonRow />
+            <SkeletonRow />
+          </tbody>
+        </table>
+      </div>
+    </AppShell>
+  );
+}
+
+function IntentsPageContent() {
   const { address } = useAccount();
   const { rows, isLoading, error } = useIntents(30);
   const router = useRouter();
