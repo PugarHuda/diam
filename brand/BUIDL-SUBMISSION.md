@@ -1,82 +1,164 @@
-# Diam — DoraHacks BUIDL Submission Copy
+# Diam — DoraHacks BUIDL Submission
 
-> Paste-ready text for the DoraHacks "Create a new BUIDL" form.
+> **Your trade. Their guess. Nobody knows.**
+>
+> Confidential on-chain OTC desk built on iExec Nox.
 
----
+This file mirrors the [DoraHacks BUIDL page](https://dorahacks.io/hackathon/vibe-coding-iexec) submitted for the iExec Vibe Coding Challenge. Keep this in sync whenever DoraHacks content changes.
 
-## BUIDL name
-```
-Diam
-```
-
-## Tagline (one-liner under the name, if asked)
-```
-Confidential OTC desk where the trade amount stays sealed on-chain.
-```
-
-> *Diam* = "diamond" + Indonesian *diam* ("silent / quiet"). The protocol keeps your order quiet.
+> ⚠️ **Demo video URL**: this file uses `https://youtu.be/_tMBT32r_kQ` (the canonical/active video). If the DoraHacks page still shows the older URL, edit it there to match.
 
 ---
 
-## BUIDL logo
-- File to upload: `brand/diam-logo-480.png` (export from `brand/export-png.html`).
-- Source SVG: `brand/diam-logo-480.svg`.
-- Already 480×480, well under 2 MB. PNG re-export keeps the matrix-green-on-black palette identical to the dApp.
+## 🔗 Links
 
----
-
-## Vision — 256-char limit (paste this if the form caps at 256)
-
-**Recommended (222 chars):**
-
-```
-Confidential OTC on iExec Nox. Trade amounts stay encrypted on-chain via TEE; a sealed-bid Vickrey RFQ settles without leaking losing bids. Institutional size privacy, fully on-chain. Your trade. Their guess. Nobody knows.
-```
-
-**Backup options at varying lengths:**
-
-| Char | Use when |
+| | |
 |---|---|
-| 125 | Tagline / hero one-liner field |
-| 153 | Twitter bio length |
-| 175 | If you want to drop the "Your trade. Their guess." cadence |
-| **222** ★ | Primary 256-char Vision field — recommended |
-| 229 | Same as 222 but explicitly leads with "Diam is a…" |
+| 🌐 Live demo | https://private-otc.vercel.app |
+| 🎥 Demo video | https://youtu.be/_tMBT32r_kQ |
+| 🐦 Twitter post | https://x.com/BangDropID/status/2050295042296984047 |
+| 💻 GitHub | https://github.com/PugarHuda/diam |
+| 📡 Network | Arbitrum Sepolia (chain id `421614`) |
+
+## 🏷️ Tracks
+
+**DeFi · TEE · Tokenization · Compliance · Institutional**
+
+---
+
+## 🎯 The Problem
+
+**$30B+ flows through OTC desks every month** — and in 2026, all of it still happens via Telegram chats, manual fiat wires, and trusted-counterparty handshakes.
+
+Whales who go on-chain instead hit two walls:
+
+- **Public DEX** (Uniswap, Curve) — ~8% slippage on size, MEV sandwich attacks, leaked alpha as the order sits in the mempool.
+- **OTC desk via Telegram** (GSR, Cumberland, Wintermute) — manual chat, fiat wires, no audit trail, full counterparty trust.
+
+Existing "private DeFi" either leaks data via revert messages or breaks composability with ZK proofs. **There is no third option.**
+
+## 💡 The Solution
+
+Diam is the third option: **on-chain OTC where amounts are encrypted end-to-end** via the iExec Nox confidential computing protocol and ERC-7984 confidential tokens.
+
+- ✅ **Direct OTC mode** — 1 maker ↔ 1 taker, atomic encrypted swap
+- ✅ **RFQ mode** — 1 maker ↔ N takers, sealed-bid Vickrey auction (best price wins, second price pays)
+- ✅ **Atomic settlement** via `Nox.safeSub` + `Nox.select` — when a bid is too low, the trade settles as an encrypted no-op. On-chain status is always `Filled` — observers cannot distinguish a successful trade from a rejected bid. **Privacy preserved on rejection.**
+- ✅ **Composable with any ERC-20** through Diam's full ERC-7984 cToken implementation (cUSDC, cETH)
+- ✅ **Auditable** via selective ACL disclosure — regulators can decrypt logs through key sharing
+
+## 🏗️ Three-Layer Architecture
+
+### 1. Core Protocol
+`PrivateOTC.sol` + `DiamCToken` on Arbitrum Sepolia. Solidity 0.8.27 + iExec Nox primitives.
+
+### 2. Compound Engineering Layer
+Four autonomous agents on Vercel Cron + Functions:
+
+- **MarketMaker** — auto-bid on RFQs
+- **RFQ Sweeper** — finalize expired auctions
+- **Settlement Monitor** — webhook on every `Settled` event
+- **Strategy Coach** — daily AI digest via ChainGPT
+
+### 3. MCP Plugin Layer
+Diam exposes itself as AI-native tools. Any LLM (Claude, Cursor, ChainGPT) can browse intents, create trades, and decrypt balances through a single MCP server. Ships with a Claude Code plugin (`/otc-*` slash commands).
+
+## 🛠️ Tech Stack
+
+| Layer | Tech |
+|---|---|
+| Smart Contracts | Solidity 0.8.27 · Foundry · `@iexec-nox/nox-protocol-contracts@0.2.2` |
+| Confidential primitives | iExec Nox (TEE-based) · NoxCompute proxy on Arbitrum Sepolia |
+| Encryption SDK | `@iexec-nox/handle@0.1.0-beta.10` (Viem v2) |
+| Frontend | Next.js 16 (App Router · Turbopack) · wagmi v2 · RainbowKit · Tailwind v4 |
+| AI | ChainGPT API — auditor, fair-price advisor, settlement reports |
+| Autonomous agents | Node 22 · viem `watchContractEvent` · Vercel Cron + Functions |
+| MCP server | `@modelcontextprotocol/sdk` (stdio transport) |
+| Hosting | Vercel (production) |
+
+## 📜 Deployed Contracts (Arbitrum Sepolia)
+
+| Contract | Address |
+|---|---|
+| PrivateOTC | [`0x5b2C0c83e41bF9ef072d742096C49DFDB814CEB4`](https://sepolia.arbiscan.io/address/0x5b2C0c83e41bF9ef072d742096C49DFDB814CEB4) |
+| DiamCToken cUSDC | [`0x57736B816F6cb53c6B2c742D3A162E89Db162ADE`](https://sepolia.arbiscan.io/address/0x57736B816F6cb53c6B2c742D3A162E89Db162ADE) |
+| DiamCToken cETH | [`0xCdD84bA9415DFE3Dd5c0c05077B1FE194Bcf695d`](https://sepolia.arbiscan.io/address/0xCdD84bA9415DFE3Dd5c0c05077B1FE194Bcf695d) |
+| NoxCompute proxy (iExec) | [`0xd464B198f06756a1d00be223634b85E0a731c229`](https://sepolia.arbiscan.io/address/0xd464B198f06756a1d00be223634b85E0a731c229) |
+
+## 🔐 Key Design Decision — Strategy B: Atomic Conditional Settlement
+
+When a taker bid falls below the maker's hidden minimum, naive contracts either revert (leaking "bid too low" via the failed transaction) or trust the client to validate (defeating confidentiality).
+
+Diam uses `Nox.safeSub` + `Nox.select` to make the trade an atomic no-op when the bid is insufficient:
+
+```solidity
+(ebool sufficient, ) = Nox.safeSub(buyAmount, intent.minBuyAmount);
+
+euint256 zero = Nox.toEuint256(0);
+euint256 effectiveSell = Nox.select(sufficient, intent.sellAmount, zero);
+euint256 effectiveBuy  = Nox.select(sufficient, buyAmount,        zero);
+
+intent.sellToken.confidentialTransferFrom(maker, taker, euint256.unwrap(effectiveSell));
+intent.buyToken.confidentialTransferFrom(taker, maker, euint256.unwrap(effectiveBuy));
+intent.status = IntentStatus.Filled;
+```
+
+The branch (real vs zero) lives entirely inside encrypted handles. The on-chain status is always `Filled` — observers cannot distinguish a successful trade from a no-op rejection.
+
+## 🚧 Challenges Faced
+
+- **Beta SDK churn** — `@iexec-nox/handle@0.1.0-beta.10` had limited examples and shifting APIs during the hackathon. Wrote our own integration patterns and contributed `feedback.md` for the Nox team.
+- **Privacy-preserving rejection** — a naive revert leaks the maker's hidden minimum. Solved with Strategy B (atomic conditional settlement) so the trade always finalizes, with real-or-zero amounts kept inside encrypted handles.
+- **Full ERC-7984 spec compliance** — not partial (partial = DQ). Implemented all 8 transfer functions (4 plain + 4 transfer-and-call), `IERC7984Receiver` callback verification, and the operator pattern with `uint48` expiry.
+- **End-to-end without mocks in <1 week** — real contracts, real ChainGPT calls, real Vercel infrastructure, real MCP server. No simulation anywhere.
+
+## ✅ What's Real (no mocks)
+
+- All three contracts deployed and verified on Arbitrum Sepolia
+- `cUSDC.confidentialTotalSupply()` returns a real Nox handle
+- `@iexec-nox/handle` and `@iexec-nox/nox-protocol-contracts` are the real iExec packages from npm
+- Vickrey logic compiles against the real Nox library
+- Frontend lives at https://private-otc.vercel.app — every route returns HTTP 200
+- Every encrypted handle is a real reference to TEE-encrypted state
+
+## 🗺️ Roadmap
+
+- Mainnet deploy on Arbitrum
+- ERC-3643 compliant institutional version (whitelist + KYC modules)
+- Cross-chain RFQ via LayerZero
+- Liquidation protection vault on top of Diam settlements
+- Open-source MCP plugin so any AI agent can route OTC flow
+
+## 👤 Team
+
+**Pugar Huda Mantoro** — solo builder
+GitHub: https://github.com/PugarHuda
+
+## 📄 License
+
+MIT
+
+---
+
+## Supplementary copy bank (not on DoraHacks — for future grants / posts)
+
+### Vision — paste-ready by character limit
+
+| Char | Use |
+|---|---|
+| 125 | Twitter bio · clip teaser caption |
+| 153 | Tagline-style |
+| 222 | Default 256-char Vision field on most forms |
 
 ```
 125: Confidential OTC on iExec Nox. Encrypted amounts, sealed Vickrey bids, fully on-chain. Your trade. Their guess. Nobody knows.
 
 153: Diam: confidential OTC on iExec Nox. Encrypted order amounts + sealed-bid Vickrey RFQ that hides losing bids. Institutional size privacy, fully on-chain.
 
-175: Confidential OTC on iExec Nox. Order amounts stay encrypted on-chain; a sealed-bid Vickrey RFQ settles without leaking losing bids. Institutional size privacy, fully on-chain.
-
-229: Diam is a confidential OTC desk on iExec Nox. Order amounts stay encrypted on-chain; a sealed-bid Vickrey RFQ settles without leaking losing bids. Institutional size privacy, fully on-chain. Your trade. Their guess. Nobody knows.
+222: Confidential OTC on iExec Nox. Trade amounts stay encrypted on-chain via TEE; a sealed-bid Vickrey RFQ settles without leaking losing bids. Institutional size privacy, fully on-chain. Your trade. Their guess. Nobody knows.
 ```
 
-## Vision — SHORT (≈ 80 words, for fields with looser limits)
-
-> On-chain OTC desks leak everything: order size, side, and price all sit in plaintext, so every MEV bot and competing desk sees the trade the moment it lands. That is why >95% of institutional OTC volume still happens off-chain on Telegram and centralized desks. **Diam** is a confidential OTC desk on iExec Nox that keeps the trade amount encrypted *on-chain* through TEE-backed `euint256` handles, and runs a sealed-bid Vickrey RFQ whose winner and clearing price are computed entirely on encrypted handles — only the result is revealed.
-
-## Vision — LONG (3 paragraphs, paste into the main "Vision" field)
-
-> **The problem.** On-chain OTC desks today leak everything. Order size, side, counterparty, and price all sit in plaintext on the blockchain — meaning every market maker, MEV bot, and competing desk sees your trade intent the moment it lands. That is why >95% of institutional OTC volume still happens off-chain in private Telegram chats and centralized desks (Genesis, Cumberland, FalconX). The on-chain alternatives — 1inch RFQ, CoW Protocol, Hashflow — protect you from MEV at execution time, but the *order itself* remains public information from the second it is posted. For an institutional desk moving 8-figure size, that is a non-starter: a leaked $50M ETH sell order moves the market against the maker before they have a chance to execute.
->
-> **What Diam does.** Diam is a confidential OTC desk built on iExec's Nox protocol. Every trade amount is encrypted *on-chain* using TEE-backed `euint256` handles. Makers post intents with sealed sizes; takers fill them blind. For RFQ flows, Diam runs a sealed-bid Vickrey second-price auction whose winner selection and clearing price are computed entirely on encrypted handles inside Nox precompiles — only the winner address and the final clearing price are ever revealed. Settlement happens atomically through `Nox.safeSub` + `Nox.select`, so a taker either pays in full and receives the asset, or the trade reverts — there is no partial-leak failure mode.
->
-> **Why it matters.** Diam ports the most valuable property of off-chain OTC desks — *size privacy* — into a fully on-chain, auditable, composable venue. Institutional desks get the discretion they need to move size without front-running; counterparties get the settlement guarantees of a smart contract; regulators get an auditable receipt for every fill. The protocol ships with end-to-end Arbitrum Sepolia deployment, a Next.js dApp, four autonomous agents (market-maker, RFQ sweeper, settlement monitor, strategy coach), an MCP server exposing the desk as an AI-callable tool, and a Foundry test suite that caught a non-trivial Vickrey middle-case bug via fuzzed pure-Solidity mirrors of the encrypted algorithm.
-
----
-
-## Category
-
-**Primary:** `DeFi`
-**Secondary (if multi-select allowed):** `Privacy / Confidential Computing`, `Infrastructure`
-
-> Diam is a DeFi trading venue at the surface, but the core value prop — *confidentiality of trade size* — is a privacy/TEE story. Lead with DeFi because that is the user-facing wedge; mention privacy because that is the technical moat.
-
----
-
-## Tagline bank (in case the form has more fields)
+### Tagline bank
 
 | Slot | Copy |
 |---|---|
@@ -84,35 +166,19 @@ Confidential OTC on iExec Nox. Trade amounts stay encrypted on-chain via TEE; a 
 | Elevator | "Diam is a confidential OTC desk on Arbitrum where the trade amount is encrypted on-chain via iExec Nox. Makers post sealed intents, takers fill them blind, and an encrypted Vickrey auction picks the winner without leaking losing bids." |
 | Twitter bio | "Confidential OTC on-chain. Sealed amounts, sealed bids, sealed wins. Built on @iEx_ec Nox." |
 | Demo hook | "We took the part of OTC that institutions actually care about — size privacy — and put it on Arbitrum." |
+| Sound bite | "OTC desks leak everything. We seal the trade amount on-chain. Your trade. Their guess. Nobody knows." |
 
----
-
-## Repo / links section (if asked)
-
-| Field | Value |
-|---|---|
-| GitHub | https://github.com/PugarHuda/diam |
-| Live demo | https://private-otc.vercel.app |
-| Demo video | https://youtu.be/_tMBT32r_kQ |
-| Twitter post | https://x.com/BangDropID/status/2050295042296984047 |
-| Network | Arbitrum Sepolia (chain id 421614) |
-| PrivateOTC contract | `0x5b2C0c83e41bF9ef072d742096C49DFDB814CEB4` |
-| cUSDC | `0x57736B816F6cb53c6B2c742D3A162E89Db162ADE` |
-| cETH | `0xCdD84bA9415DFE3Dd5c0c05077B1FE194Bcf695d` |
-| DiamReceipt | `0xE011E57ff89a9b1450551A7cE402b75c5Bd27B85` |
-| NoxCompute proxy (iExec) | `0xd464B198f06756a1d00be223634b85E0a731c229` |
-
----
-
-## Brand palette (for any later "media kit" question)
+### Brand palette
 
 | Token | Hex | Use |
 |---|---|---|
 | Background | `#131313` | Page bg |
 | Surface | `#1a1a1a` | Cards |
-| Primary (matrix green) | `#00ff41` | Brand mark, primary CTA |
+| Primary (matrix green) | `#00ff41` | Brand mark, CTA |
 | Primary fg | `#002203` | Text on green buttons |
 | Muted | `#84967e` | Secondary copy |
 | Foreground | `#e5e2e1` | Body text |
 
-Fonts: **Space Grotesk** (display + mono) / **Inter** (body).
+Fonts: **Space Grotesk** (display + mono) · **Inter** (body)
+
+Logo source: `brand/diam-logo-480.svg` · Export 480×480 PNG via `brand/export-png.html`
