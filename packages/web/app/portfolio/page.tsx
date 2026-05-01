@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAccount, useReadContract } from "wagmi";
 import { formatUnits } from "viem";
 import type { Hex } from "viem";
@@ -139,13 +139,39 @@ function BalanceRow({
   const [decrypted, setDecrypted] = useState<bigint | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isStale, setIsStale] = useState(false);
+  const lastDecryptedHandle = useRef<Hex | null>(null);
 
+  // Poll the encrypted balance handle every 12s so a settlement that
+  // mutated this account's balance (e.g. RFQ reveal, Direct OTC accept)
+  // gets reflected in the UI without a manual refresh. wagmi v2 sits on
+  // top of TanStack Query, so refetchInterval is honored at the query
+  // level and refetchOnWindowFocus picks up changes when the user comes
+  // back to the tab after an action elsewhere.
   const handleQuery = useReadContract({
     address: token.address,
     abi: ERC7984_ABI,
     functionName: "confidentialBalanceOf",
     args: [account],
+    query: {
+      refetchInterval: 12_000,
+      refetchOnWindowFocus: true,
+    },
   });
+
+  // When the on-chain handle changes (settlement happened), surface a
+  // "balance changed — re-decrypt" badge so the user knows the previously
+  // shown plaintext is no longer current.
+  useEffect(() => {
+    const current = (handleQuery.data as Hex | undefined) ?? null;
+    if (
+      current &&
+      lastDecryptedHandle.current &&
+      current !== lastDecryptedHandle.current
+    ) {
+      setIsStale(true);
+    }
+  }, [handleQuery.data]);
 
   async function onDecrypt() {
     if (!ready) return;
@@ -155,8 +181,11 @@ function BalanceRow({
       const client = await getClient();
       if (!client) throw new Error("Nox client unavailable");
       if (!handleQuery.data) throw new Error("Balance handle not loaded");
-      const value = await decryptUint256(client, handleQuery.data as Hex);
+      const handle = handleQuery.data as Hex;
+      const value = await decryptUint256(client, handle);
       setDecrypted(value);
+      lastDecryptedHandle.current = handle;
+      setIsStale(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -164,12 +193,27 @@ function BalanceRow({
     }
   }
 
+  function onRefresh() {
+    handleQuery.refetch();
+    setIsStale(false);
+  }
+
   return (
     <div className="glass-card flex items-center justify-between p-4 transition-all hover:border-[--color-primary]/40">
       <div className="flex items-center gap-4">
         <TokenIcon symbol={token.symbol} size="md" />
         <div>
-          <p className="font-display text-sm font-bold">{token.symbol}</p>
+          <div className="flex items-center gap-2">
+            <p className="font-display text-sm font-bold">{token.symbol}</p>
+            {isStale && (
+              <span
+                className="text-label-caps animate-pulse border border-amber-700 bg-amber-950/40 px-1.5 py-0.5 text-[9px] text-amber-400"
+                title="On-chain balance changed since you last decrypted"
+              >
+                Updated
+              </span>
+            )}
+          </div>
           {handleQuery.data ? (
             <p className="flex items-center gap-1 font-mono text-[11px] text-zinc-600">
               <span className="material-symbols-outlined text-xs text-[--color-primary]/40">
@@ -183,43 +227,68 @@ function BalanceRow({
         </div>
       </div>
 
-      <div className="text-right">
-        {decrypted !== null ? (
-          <>
-            <p
-              className="flex items-center justify-end gap-2 font-mono text-lg text-[--color-primary]"
-              data-numeric
+      <div className="flex items-center gap-2 text-right">
+        <button
+          onClick={onRefresh}
+          disabled={handleQuery.isFetching}
+          className="text-label-caps flex items-center gap-1 border border-zinc-800 px-2 py-1.5 text-zinc-500 transition-colors hover:border-[--color-primary]/40 hover:text-[--color-primary] disabled:opacity-40"
+          title="Refetch handle from chain"
+        >
+          <span
+            className={`material-symbols-outlined text-sm ${
+              handleQuery.isFetching ? "animate-spin" : ""
+            }`}
+          >
+            refresh
+          </span>
+        </button>
+
+        <div>
+          {decrypted !== null && !isStale ? (
+            <>
+              <p
+                className="flex items-center justify-end gap-2 font-mono text-lg text-[--color-primary]"
+                data-numeric
+              >
+                <span
+                  className="material-symbols-outlined text-base"
+                  style={{ fontVariationSettings: "'FILL' 1" }}
+                >
+                  lock_open
+                </span>
+                {formatUnits(decrypted, token.decimals)}
+              </p>
+              <p className="text-label-caps text-zinc-600">
+                {token.symbol} · DECRYPTED
+              </p>
+            </>
+          ) : (
+            <button
+              onClick={onDecrypt}
+              disabled={!ready || loading || !handleQuery.data}
+              className="text-label-caps flex items-center gap-1.5 border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-[--color-primary] transition-all hover:bg-[--color-primary] hover:text-[--color-primary-fg] disabled:opacity-50"
             >
               <span
-                className="material-symbols-outlined text-base"
-                style={{ fontVariationSettings: "'FILL' 1" }}
+                className={`material-symbols-outlined text-base ${
+                  loading ? "animate-spin" : ""
+                }`}
               >
-                lock_open
+                {loading ? "sync" : isStale ? "key" : "key"}
               </span>
-              {formatUnits(decrypted, token.decimals)}
+              {loading
+                ? "DECRYPTING…"
+                : isStale
+                  ? "RE-DECRYPT"
+                  : "DECRYPT"}
+            </button>
+          )}
+          {error && (
+            <p className="mt-1 flex items-center gap-1 font-mono text-[10px] text-[--color-danger]">
+              <span className="material-symbols-outlined text-xs">error</span>
+              {error}
             </p>
-            <p className="text-label-caps text-zinc-600">
-              {token.symbol} · DECRYPTED
-            </p>
-          </>
-        ) : (
-          <button
-            onClick={onDecrypt}
-            disabled={!ready || loading || !handleQuery.data}
-            className="text-label-caps flex items-center gap-1.5 border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-[--color-primary] transition-all hover:bg-[--color-primary] hover:text-[--color-primary-fg] disabled:opacity-50"
-          >
-            <span className="material-symbols-outlined text-base">
-              {loading ? "sync" : "key"}
-            </span>
-            {loading ? "DECRYPTING…" : "DECRYPT"}
-          </button>
-        )}
-        {error && (
-          <p className="mt-1 flex items-center gap-1 font-mono text-[10px] text-[--color-danger]">
-            <span className="material-symbols-outlined text-xs">error</span>
-            {error}
-          </p>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
