@@ -11,6 +11,7 @@ import { NftReceipt } from "@/components/NftReceipt";
 import { SkeletonCard } from "@/components/Skeleton";
 import { OperatorAuth } from "@/components/OperatorAuth";
 import { useSetOperator } from "@/lib/hooks/useSetOperator";
+import { useSettledTaker } from "@/lib/hooks/useSettledTaker";
 import { privateOtcAbi } from "@/lib/abi/privateOtc";
 import { PRIVATE_OTC_ADDRESS, CUSDC_ADDRESS, CETH_ADDRESS } from "@/lib/wagmi";
 import { parseAbi } from "viem";
@@ -236,6 +237,7 @@ export default function RfqDetailPage({
     intentSellTokenForRead,
     isMakerForRead ? address : undefined,
   );
+  const settledTaker = useSettledTaker(rfqId);
 
   if (intentQuery.isLoading) {
     return (
@@ -729,20 +731,27 @@ export default function RfqDetailPage({
             </div>
           )}
 
-          {(rfq.status === 1 || reveal.step === "done") &&
-            (isMaker || reveal.step === "done") && (
-              <NftReceipt
-                pair={`${sellSym}/${buyTok?.symbol ?? "?"}`}
-                intentId={id}
-                mode="RFQ"
-                txHash={reveal.txHash ?? finalize.txHash ?? undefined}
-                makerAddress={rfq.maker}
-                timestamp={Date.now()}
-              />
-            )}
-          {rfq.status === 1 &&
-            !isMaker &&
-            reveal.step !== "done" && (
+          {(() => {
+            const isSettled = rfq.status === 1 || reveal.step === "done";
+            const isWinner =
+              !!address &&
+              !!settledTaker.taker &&
+              address.toLowerCase() === settledTaker.taker.toLowerCase();
+            const canMint = isMaker || reveal.step === "done" || isWinner;
+            if (!isSettled) return null;
+            if (canMint) {
+              return (
+                <NftReceipt
+                  pair={`${sellSym}/${buyTok?.symbol ?? "?"}`}
+                  intentId={id}
+                  mode="RFQ"
+                  txHash={reveal.txHash ?? finalize.txHash ?? undefined}
+                  makerAddress={rfq.maker}
+                  timestamp={Date.now()}
+                />
+              );
+            }
+            return (
               <div className="border border-zinc-800 bg-zinc-900/30 p-4">
                 <p className="text-label-caps flex items-center gap-2 text-zinc-500">
                   <span className="material-symbols-outlined text-base">
@@ -751,12 +760,13 @@ export default function RfqDetailPage({
                   Read-only view
                 </p>
                 <p className="mt-2 font-mono text-[11px] text-zinc-500">
-                  Auction settled. Only the maker (and the winning bidder
-                  who decrypted the price) can mint the on-chain receipt —
-                  other observers see the audit trail only.
+                  Auction settled. Only the maker and the winning bidder
+                  can mint the on-chain receipt — other observers see the
+                  audit trail only.
                 </p>
               </div>
-            )}
+            );
+          })()}
 
           <div className="glass-card border-l-2 border-l-[--color-primary] p-6">
             <div className="mb-3 flex items-center gap-3">

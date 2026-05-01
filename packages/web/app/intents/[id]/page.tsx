@@ -14,6 +14,7 @@ import { useToast } from "@/components/Toast";
 import { OperatorAuth } from "@/components/OperatorAuth";
 import { OperatorWarning } from "@/components/OperatorWarning";
 import { useIsOperator, useSetOperator } from "@/lib/hooks/useSetOperator";
+import { useSettledTaker } from "@/lib/hooks/useSettledTaker";
 import { privateOtcAbi } from "@/lib/abi/privateOtc";
 import { PRIVATE_OTC_ADDRESS, CUSDC_ADDRESS, CETH_ADDRESS } from "@/lib/wagmi";
 import { useAcceptIntent, useCancelIntent } from "@/lib/hooks/useOtcWrites";
@@ -96,6 +97,7 @@ export default function IntentDetailPage({
   // gas for a doomed accept.
   const takerBuyAuth = useSetOperator(intentBuyToken, address);
   const makerSellAuth = useIsOperator(intentSellToken, intentMaker);
+  const settledTaker = useSettledTaker(intentId);
 
   if (intentQuery.isLoading) {
     return (
@@ -489,21 +491,29 @@ export default function IntentDetailPage({
             </div>
           )}
 
-          {(intent.status === 1 || accept.step === "done") &&
-            (isMaker || accept.step === "done") && (
-              <NftReceipt
-                pair={`${TOKEN_NAMES[intent.sellToken.toLowerCase()]?.symbol ?? "?"}/${TOKEN_NAMES[intent.buyToken.toLowerCase()]?.symbol ?? "?"}`}
-                intentId={id}
-                mode="Direct"
-                txHash={accept.txHash ?? undefined}
-                makerAddress={intent.maker}
-                sellHandle={intent.sellAmountHandle}
-                timestamp={Date.now()}
-              />
-            )}
-          {intent.status === 1 &&
-            !isMaker &&
-            accept.step !== "done" && (
+          {(() => {
+            const isSettled = intent.status === 1 || accept.step === "done";
+            const isSettledTaker =
+              !!address &&
+              !!settledTaker.taker &&
+              address.toLowerCase() === settledTaker.taker.toLowerCase();
+            const canMint =
+              isMaker || accept.step === "done" || isSettledTaker;
+            if (!isSettled) return null;
+            if (canMint) {
+              return (
+                <NftReceipt
+                  pair={`${TOKEN_NAMES[intent.sellToken.toLowerCase()]?.symbol ?? "?"}/${TOKEN_NAMES[intent.buyToken.toLowerCase()]?.symbol ?? "?"}`}
+                  intentId={id}
+                  mode="Direct"
+                  txHash={accept.txHash ?? undefined}
+                  makerAddress={intent.maker}
+                  sellHandle={intent.sellAmountHandle}
+                  timestamp={Date.now()}
+                />
+              );
+            }
+            return (
               <div className="border border-zinc-800 bg-zinc-900/30 p-4">
                 <p className="text-label-caps flex items-center gap-2 text-zinc-500">
                   <span className="material-symbols-outlined text-base">
@@ -517,7 +527,8 @@ export default function IntentDetailPage({
                   see the audit trail but not the keepsake.
                 </p>
               </div>
-            )}
+            );
+          })()}
         </aside>
       </div>
     </AppShell>
