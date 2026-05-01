@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import type { Route } from "next";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAccount } from "wagmi";
 import { AppShell } from "@/components/AppShell";
 import { PageHeader, SectionHeader } from "@/components/PageHeader";
@@ -22,14 +23,56 @@ type ModeFilter = "all" | "direct" | "rfq";
 type StatusFilter = "all" | "open" | "filled" | "cancelled" | "pending";
 type PairFilter = "all" | "ceth-cusdc" | "cusdc-ceth";
 
+const MODE_VALUES: ModeFilter[] = ["all", "direct", "rfq"];
+const STATUS_VALUES: StatusFilter[] = [
+  "all",
+  "open",
+  "pending",
+  "filled",
+  "cancelled",
+];
+const PAIR_VALUES: PairFilter[] = ["all", "ceth-cusdc", "cusdc-ceth"];
+
+function parseEnum<T extends string>(
+  raw: string | null,
+  values: T[],
+  fallback: T,
+): T {
+  return values.includes(raw as T) ? (raw as T) : fallback;
+}
+
 export default function IntentsPage() {
   const { address } = useAccount();
   const { rows, isLoading, error } = useIntents(30);
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
-  const [modeFilter, setModeFilter] = useState<ModeFilter>("all");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [pairFilter, setPairFilter] = useState<PairFilter>("all");
-  const [onlyMine, setOnlyMine] = useState(false);
+  // Initialize from URL so /intents?mode=rfq&status=filled is shareable.
+  const [modeFilter, setModeFilter] = useState<ModeFilter>(() =>
+    parseEnum(searchParams.get("mode"), MODE_VALUES, "all"),
+  );
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>(() =>
+    parseEnum(searchParams.get("status"), STATUS_VALUES, "all"),
+  );
+  const [pairFilter, setPairFilter] = useState<PairFilter>(() =>
+    parseEnum(searchParams.get("pair"), PAIR_VALUES, "all"),
+  );
+  const [onlyMine, setOnlyMine] = useState(
+    () => searchParams.get("mine") === "1",
+  );
+
+  // Reflect filter state back into the URL so links survive page reload
+  // and browser back/forward keeps the same view. router.replace avoids
+  // pushing a new history entry per filter click.
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (modeFilter !== "all") params.set("mode", modeFilter);
+    if (statusFilter !== "all") params.set("status", statusFilter);
+    if (pairFilter !== "all") params.set("pair", pairFilter);
+    if (onlyMine) params.set("mine", "1");
+    const qs = params.toString();
+    router.replace(qs ? `/intents?${qs}` : "/intents", { scroll: false });
+  }, [modeFilter, statusFilter, pairFilter, onlyMine, router]);
 
   const filtered = useMemo(() => {
     return rows.filter((r) => {
