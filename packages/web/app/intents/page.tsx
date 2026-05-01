@@ -10,7 +10,7 @@ import { PageHeader, SectionHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { TokenIcon } from "@/components/TokenIcon";
 import { SkeletonRow } from "@/components/Skeleton";
-import { useIntents, statusLabel, modeLabel } from "@/lib/hooks/useIntents";
+import { useIntents, statusLabel } from "@/lib/hooks/useIntents";
 import { shortAddress } from "@/lib/utils";
 import { CUSDC_ADDRESS, CETH_ADDRESS } from "@/lib/wagmi";
 
@@ -61,7 +61,7 @@ function IntentsLoadingSkeleton() {
         subtitle="ASSET_PAIRS_VISIBLE | AMOUNTS_ENCRYPTED"
       />
       <div className="glass-card overflow-hidden">
-        <div className="flex items-center justify-between border-b border-zinc-800 p-6">
+        <div className="flex items-center justify-between border-b border-zinc-800 p-4">
           <div className="flex items-center gap-2 font-mono text-xs text-zinc-500">
             <span className="material-symbols-outlined animate-spin text-base text-[--color-primary]">
               sync
@@ -128,8 +128,10 @@ function IntentsPageContent() {
         const sell = TOKEN_NAMES[r.sellToken.toLowerCase()] ?? "?";
         const buy = TOKEN_NAMES[r.buyToken.toLowerCase()] ?? "?";
         const pairKey = `${sell}-${buy}`.toLowerCase();
-        if (pairFilter === "ceth-cusdc" && pairKey !== "ceth-cusdc") return false;
-        if (pairFilter === "cusdc-ceth" && pairKey !== "cusdc-ceth") return false;
+        if (pairFilter === "ceth-cusdc" && pairKey !== "ceth-cusdc")
+          return false;
+        if (pairFilter === "cusdc-ceth" && pairKey !== "cusdc-ceth")
+          return false;
       }
 
       if (
@@ -151,11 +153,11 @@ function IntentsPageContent() {
     setOnlyMine(false);
   };
 
-  const hasActiveFilter =
-    modeFilter !== "all" ||
-    statusFilter !== "all" ||
-    pairFilter !== "all" ||
-    onlyMine;
+  const activeFilterCount =
+    (modeFilter !== "all" ? 1 : 0) +
+    (statusFilter !== "all" ? 1 : 0) +
+    (pairFilter !== "all" ? 1 : 0) +
+    (onlyMine ? 1 : 0);
 
   return (
     <AppShell>
@@ -186,14 +188,14 @@ function IntentsPageContent() {
           walletConnected={!!address}
           totalCount={rows.length}
           filteredCount={filtered.length}
-          hasActiveFilter={hasActiveFilter}
+          activeFilterCount={activeFilterCount}
           onClear={clearFilters}
         />
       )}
 
       {isLoading && (
         <div className="glass-card overflow-hidden">
-          <div className="flex items-center justify-between border-b border-zinc-800 p-6">
+          <div className="flex items-center justify-between border-b border-zinc-800 p-4">
             <div className="flex items-center gap-2 font-mono text-xs text-zinc-500">
               <span className="material-symbols-outlined animate-spin text-base text-[--color-primary]">
                 sync
@@ -257,149 +259,136 @@ function IntentsPageContent() {
 
       {filtered.length > 0 && (
         <div className="glass-card flex flex-col overflow-hidden">
-          <div className="border-b border-zinc-800 p-6">
-            <SectionHeader
-              icon="menu_book"
-              title="Order Book"
-              right={
-                <div className="flex gap-4">
-                  <Legend color="bg-[--color-primary]" label="Open" />
-                  <Legend color="bg-zinc-500" label="Filled" />
-                  <Legend color="bg-orange-500" label="Cancelled" />
-                </div>
-              }
-            />
+          <div className="flex items-center justify-between border-b border-zinc-800 px-4 py-3">
+            <SectionHeader icon="menu_book" title="Order Book" />
+            <div className="hidden gap-3 lg:flex">
+              <Legend color="bg-emerald-400" label="Open" />
+              <Legend color="bg-amber-400" label="Pending" />
+              <Legend color="bg-zinc-500" label="Filled" />
+              <Legend color="bg-orange-500" label="Cancelled" />
+            </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="border-b border-zinc-800 bg-zinc-900/50">
-                  <Th>Intent ID</Th>
-                  <Th>Sell → Buy</Th>
-                  <Th>Mode</Th>
-                  <Th>Maker</Th>
-                  <Th>Volume (Encrypted)</Th>
-                  <Th>Status</Th>
-                  <Th>Expires</Th>
-                  <Th align="right">Action</Th>
+          <table className="w-full table-fixed text-left">
+            <colgroup>
+              <col className="w-[72px]" />
+              <col className="w-auto" />
+              <col className="w-[140px]" />
+              <col className="w-[110px]" />
+              <col className="w-[110px]" />
+              <col className="w-[120px]" />
+            </colgroup>
+            <thead>
+              <tr className="border-b border-zinc-800 bg-zinc-900/50">
+                <Th>#</Th>
+                <Th>Sell → Buy</Th>
+                <Th>Maker</Th>
+                <Th>Status</Th>
+                <Th>Expires</Th>
+                <Th align="right">Action</Th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-zinc-800/50">
+              {filtered.map((row) => (
+                <tr
+                  key={row.id.toString()}
+                  className="group transition-colors hover:bg-zinc-800/20"
+                >
+                  <Td>
+                    <span
+                      className="flex items-center gap-1.5"
+                      title={
+                        row.mode === 1
+                          ? "Vickrey RFQ — sealed-bid auction"
+                          : "Direct OTC — bilateral 1:1 trade"
+                      }
+                    >
+                      <span
+                        className={`material-symbols-outlined text-base ${
+                          row.mode === 1
+                            ? "text-emerald-400/70"
+                            : "text-orange-400/70"
+                        }`}
+                      >
+                        {row.mode === 1 ? "gavel" : "handshake"}
+                      </span>
+                      <span className="font-mono text-xs text-zinc-300">
+                        #{row.id.toString()}
+                      </span>
+                    </span>
+                  </Td>
+
+                  <Td>
+                    <PairCell
+                      sell={
+                        TOKEN_NAMES[row.sellToken.toLowerCase()] ?? "?"
+                      }
+                      buy={TOKEN_NAMES[row.buyToken.toLowerCase()] ?? "?"}
+                    />
+                  </Td>
+
+                  <Td>
+                    <span
+                      className="flex items-center gap-1.5 font-mono text-[11px] text-zinc-500"
+                      title={row.maker}
+                    >
+                      {shortAddress(row.maker, 4)}
+                      {address &&
+                        row.maker.toLowerCase() ===
+                          address.toLowerCase() && (
+                          <span className="text-label-caps border border-[--color-primary]/40 bg-[--color-primary]/10 px-1 py-0.5 text-[8px] text-[--color-primary]">
+                            YOU
+                          </span>
+                        )}
+                    </span>
+                  </Td>
+
+                  <Td>
+                    <StatusBadge status={row.status} />
+                  </Td>
+
+                  <Td>
+                    <RelativeTime ts={row.deadline} status={row.status} />
+                  </Td>
+
+                  <Td align="right">
+                    {row.status === 0 && (
+                      <Link
+                        href={
+                          (row.mode === 1
+                            ? `/rfq/${row.id.toString()}`
+                            : `/intents/${row.id.toString()}`) as Route
+                        }
+                        className="text-label-caps inline-flex items-center border border-zinc-800 bg-zinc-900 px-2.5 py-1 text-[--color-primary] transition-all hover:bg-[--color-primary] hover:text-[--color-primary-fg]"
+                      >
+                        {row.mode === 1 ? "Bid" : "Accept"}
+                      </Link>
+                    )}
+                    {row.status !== 0 && (
+                      <Link
+                        href={
+                          (row.mode === 1
+                            ? `/rfq/${row.id.toString()}`
+                            : `/intents/${row.id.toString()}`) as Route
+                        }
+                        className="text-label-caps text-zinc-600 hover:text-zinc-300"
+                      >
+                        View
+                      </Link>
+                    )}
+                  </Td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-800/50">
-                {filtered.map((row) => (
-                  <tr
-                    key={row.id.toString()}
-                    className="group transition-colors hover:bg-zinc-800/20"
-                  >
-                    <Td>
-                      <span className="font-mono text-xs text-zinc-400">
-                        #IX_{row.id.toString().padStart(4, "0")}
-                      </span>
-                    </Td>
-                    <Td>
-                      <div className="flex items-center gap-3 whitespace-nowrap">
-                        <div className="flex items-center gap-1.5">
-                          <span
-                            className="text-label-caps text-rose-400/80"
-                            title="Maker is selling this token"
-                          >
-                            SELL
-                          </span>
-                          <TokenIcon
-                            symbol={
-                              TOKEN_NAMES[row.sellToken.toLowerCase()] ?? "?"
-                            }
-                            size="sm"
-                          />
-                          <span className="font-mono text-xs text-zinc-200">
-                            {TOKEN_NAMES[row.sellToken.toLowerCase()] ?? "?"}
-                          </span>
-                        </div>
-                        <span className="material-symbols-outlined text-base text-zinc-600">
-                          arrow_forward
-                        </span>
-                        <div className="flex items-center gap-1.5">
-                          <span
-                            className="text-label-caps text-emerald-400/80"
-                            title="Maker wants to receive this token"
-                          >
-                            BUY
-                          </span>
-                          <TokenIcon
-                            symbol={
-                              TOKEN_NAMES[row.buyToken.toLowerCase()] ?? "?"
-                            }
-                            size="sm"
-                          />
-                          <span className="font-mono text-xs text-zinc-200">
-                            {TOKEN_NAMES[row.buyToken.toLowerCase()] ?? "?"}
-                          </span>
-                        </div>
-                      </div>
-                    </Td>
-                    <Td>
-                      <ModeBadge mode={row.mode} />
-                    </Td>
-                    <Td>
-                      <span className="flex items-center gap-1.5 font-mono text-[11px] text-zinc-500">
-                        {shortAddress(row.maker)}
-                        {address &&
-                          row.maker.toLowerCase() === address.toLowerCase() && (
-                            <span className="text-label-caps border border-[--color-primary]/40 bg-[--color-primary]/10 px-1.5 py-0.5 text-[8px] text-[--color-primary]">
-                              YOU
-                            </span>
-                          )}
-                      </span>
-                    </Td>
-                    <Td>
-                      <div className="flex items-center gap-2 border border-zinc-800 bg-zinc-950 px-2 py-1 font-mono text-[10px] text-zinc-600">
-                        <span className="material-symbols-outlined text-sm text-[--color-primary]/40">
-                          lock
-                        </span>
-                        {row.sellAmountHandle.slice(0, 10)}…
-                      </div>
-                    </Td>
-                    <Td>
-                      <StatusBadge status={row.status} />
-                    </Td>
-                    <Td>
-                      <RelativeTime ts={row.deadline} />
-                    </Td>
-                    <Td align="right">
-                      {row.status === 0 && (
-                        <Link
-                          href={
-                            (row.mode === 1
-                              ? `/rfq/${row.id.toString()}`
-                              : `/intents/${row.id.toString()}`) as Route
-                          }
-                          className="text-label-caps border border-zinc-800 bg-zinc-900 px-3 py-1 text-[--color-primary] transition-all hover:bg-[--color-primary] hover:text-[--color-primary-fg]"
-                        >
-                          {row.mode === 1 ? "Place Bid" : "Accept"}
-                        </Link>
-                      )}
-                      {row.status !== 0 && (
-                        <Link
-                          href={`/intents/${row.id.toString()}` as Route}
-                          className="text-label-caps text-zinc-600 hover:text-zinc-300"
-                        >
-                          View
-                        </Link>
-                      )}
-                    </Td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </tbody>
+          </table>
 
-          <div className="flex items-center justify-between border-t border-zinc-800 bg-zinc-900/30 p-4">
+          <div className="flex items-center justify-between border-t border-zinc-800 bg-zinc-900/30 px-4 py-2">
             <span className="font-mono text-[10px] text-zinc-600">
-              SHOWING {filtered.length} OF {rows.length} INTENTS
-              {hasActiveFilter ? " (FILTERED)" : ""}
+              SHOWING {filtered.length} OF {rows.length}
+              {activeFilterCount > 0 ? " · FILTERED" : ""}
             </span>
             <div className="font-mono text-[10px] text-zinc-600">
-              ENCRYPTED_VOLUME · NOX_LAYER
+              ENCRYPTED · NOX_LAYER
             </div>
           </div>
         </div>
@@ -420,7 +409,7 @@ function FilterBar({
   walletConnected,
   totalCount,
   filteredCount,
-  hasActiveFilter,
+  activeFilterCount,
   onClear,
 }: {
   modeFilter: ModeFilter;
@@ -434,110 +423,142 @@ function FilterBar({
   walletConnected: boolean;
   totalCount: number;
   filteredCount: number;
-  hasActiveFilter: boolean;
+  activeFilterCount: number;
   onClear: () => void;
 }) {
   return (
-    <div className="glass-card mb-4 p-4">
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-        <FilterGroup
-          label="MODE"
-          options={[
-            { value: "all", label: "All" },
-            { value: "direct", label: "Direct" },
-            { value: "rfq", label: "RFQ" },
-          ]}
-          value={modeFilter}
-          onChange={setModeFilter}
-        />
+    <div className="glass-card mb-4 flex flex-wrap items-center gap-2 px-3 py-2">
+      <span className="text-label-caps flex items-center gap-1 text-zinc-500">
+        <span className="material-symbols-outlined text-sm">filter_alt</span>
+        Filter
+        {activeFilterCount > 0 && (
+          <span className="ml-1 inline-flex h-4 min-w-[1rem] items-center justify-center bg-[--color-primary] px-1 text-[9px] font-bold text-[--color-primary-fg]">
+            {activeFilterCount}
+          </span>
+        )}
+      </span>
 
-        <FilterGroup
-          label="STATUS"
-          options={[
-            { value: "all", label: "All" },
-            { value: "open", label: "Open" },
-            { value: "pending", label: "Pending Reveal" },
-            { value: "filled", label: "Filled" },
-            { value: "cancelled", label: "Cancelled" },
-          ]}
-          value={statusFilter}
-          onChange={setStatusFilter}
-        />
+      <FilterGroup
+        options={[
+          { value: "all", label: "All Modes" },
+          { value: "direct", label: "Direct" },
+          { value: "rfq", label: "RFQ" },
+        ]}
+        value={modeFilter}
+        onChange={setModeFilter}
+      />
 
-        <FilterGroup
-          label="PAIR"
-          options={[
-            { value: "all", label: "All" },
-            { value: "ceth-cusdc", label: "cETH → cUSDC" },
-            { value: "cusdc-ceth", label: "cUSDC → cETH" },
-          ]}
-          value={pairFilter}
-          onChange={setPairFilter}
-        />
+      <FilterGroup
+        options={[
+          { value: "all", label: "All Status" },
+          { value: "open", label: "Open" },
+          { value: "pending", label: "Pending" },
+          { value: "filled", label: "Filled" },
+          { value: "cancelled", label: "Cancelled" },
+        ]}
+        value={statusFilter}
+        onChange={setStatusFilter}
+      />
 
-        {walletConnected && (
+      <FilterGroup
+        options={[
+          { value: "all", label: "All Pairs" },
+          { value: "ceth-cusdc", label: "cETH→cUSDC" },
+          { value: "cusdc-ceth", label: "cUSDC→cETH" },
+        ]}
+        value={pairFilter}
+        onChange={setPairFilter}
+      />
+
+      {walletConnected && (
+        <button
+          onClick={() => setOnlyMine(!onlyMine)}
+          className={`text-label-caps flex items-center gap-1 border px-2.5 py-1 transition-colors ${
+            onlyMine
+              ? "border-[--color-primary] bg-[--color-primary]/10 text-[--color-primary]"
+              : "border-zinc-800 bg-zinc-950 text-zinc-500 hover:border-zinc-600 hover:text-zinc-200"
+          }`}
+        >
+          <span className="material-symbols-outlined text-sm">
+            {onlyMine ? "check_box" : "check_box_outline_blank"}
+          </span>
+          Mine
+        </button>
+      )}
+
+      <div className="ml-auto flex items-center gap-2">
+        <span className="font-mono text-[10px] text-zinc-500">
+          {filteredCount}
+          <span className="text-zinc-700">/{totalCount}</span>
+        </span>
+        {activeFilterCount > 0 && (
           <button
-            onClick={() => setOnlyMine(!onlyMine)}
-            className={`text-label-caps flex items-center gap-1.5 border px-3 py-1.5 transition-colors ${
-              onlyMine
-                ? "border-[--color-primary] bg-[--color-primary]/10 text-[--color-primary]"
-                : "border-zinc-800 bg-zinc-950 text-zinc-500 hover:border-zinc-600 hover:text-zinc-200"
-            }`}
+            onClick={onClear}
+            className="text-label-caps flex items-center gap-1 border border-zinc-800 px-2 py-1 text-zinc-500 transition-colors hover:border-[--color-danger] hover:text-[--color-danger]"
+            title="Clear all filters"
           >
-            <span className="material-symbols-outlined text-sm">
-              {onlyMine ? "check_box" : "check_box_outline_blank"}
-            </span>
-            My Intents
+            <span className="material-symbols-outlined text-sm">close</span>
+            Clear
           </button>
         )}
-
-        <div className="ml-auto flex items-center gap-3">
-          <span className="font-mono text-[10px] text-zinc-500">
-            {filteredCount}/{totalCount}
-          </span>
-          {hasActiveFilter && (
-            <button
-              onClick={onClear}
-              className="text-label-caps flex items-center gap-1 border border-zinc-800 px-2.5 py-1 text-zinc-500 transition-colors hover:border-[--color-danger] hover:text-[--color-danger]"
-            >
-              <span className="material-symbols-outlined text-sm">close</span>
-              Clear
-            </button>
-          )}
-        </div>
       </div>
     </div>
   );
 }
 
 function FilterGroup<T extends string>({
-  label,
   options,
   value,
   onChange,
 }: {
-  label: string;
   options: { value: T; label: string }[];
   value: T;
   onChange: (v: T) => void;
 }) {
   return (
-    <div className="flex items-center gap-2">
-      <span className="text-label-caps text-zinc-600">{label}</span>
-      <div className="flex border border-zinc-800 bg-zinc-950">
-        {options.map((opt) => (
-          <button
-            key={opt.value}
-            onClick={() => onChange(opt.value)}
-            className={`text-label-caps px-3 py-1 transition-colors ${
-              value === opt.value
-                ? "bg-[--color-primary] text-[--color-primary-fg]"
-                : "text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200"
-            }`}
-          >
-            {opt.label}
-          </button>
-        ))}
+    <div className="flex border border-zinc-800 bg-zinc-950">
+      {options.map((opt) => (
+        <button
+          key={opt.value}
+          onClick={() => onChange(opt.value)}
+          className={`text-label-caps px-2.5 py-1 transition-colors ${
+            value === opt.value
+              ? "bg-[--color-primary] text-[--color-primary-fg]"
+              : "text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200"
+          }`}
+        >
+          {opt.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function PairCell({ sell, buy }: { sell: string; buy: string }) {
+  return (
+    <div className="flex items-center gap-2 whitespace-nowrap">
+      <div
+        className="flex items-center gap-1"
+        title={`Maker is selling ${sell}`}
+      >
+        <span className="text-[8px] font-bold uppercase tracking-wider text-rose-400/80">
+          S
+        </span>
+        <TokenIcon symbol={sell} size="sm" />
+        <span className="font-mono text-xs text-zinc-200">{sell}</span>
+      </div>
+      <span className="material-symbols-outlined text-base text-zinc-600">
+        arrow_forward
+      </span>
+      <div
+        className="flex items-center gap-1"
+        title={`Maker wants to receive ${buy}`}
+      >
+        <span className="text-[8px] font-bold uppercase tracking-wider text-emerald-400/80">
+          B
+        </span>
+        <TokenIcon symbol={buy} size="sm" />
+        <span className="font-mono text-xs text-zinc-200">{buy}</span>
       </div>
     </div>
   );
@@ -552,7 +573,7 @@ function Th({
 }) {
   return (
     <th
-      className={`text-label-caps px-6 py-4 text-zinc-500 ${
+      className={`text-label-caps px-3 py-3 text-zinc-500 ${
         align === "right" ? "text-right" : ""
       }`}
     >
@@ -570,7 +591,7 @@ function Td({
 }) {
   return (
     <td
-      className={`px-6 py-4 text-sm ${
+      className={`px-3 py-3 text-sm ${
         align === "right" ? "text-right" : ""
       }`}
     >
@@ -581,24 +602,12 @@ function Td({
 
 function Legend({ color, label }: { color: string; label: string }) {
   return (
-    <div className="flex items-center gap-2">
-      <div className={`h-2 w-2 rounded-full ${color}`} />
+    <div className="flex items-center gap-1.5">
+      <div className={`h-1.5 w-1.5 rounded-full ${color}`} />
       <span className="font-mono text-[9px] uppercase text-zinc-500">
         {label}
       </span>
     </div>
-  );
-}
-
-function ModeBadge({ mode }: { mode: number }) {
-  const cls =
-    mode === 0
-      ? "border-orange-900 bg-orange-950/40 text-orange-400"
-      : "border-emerald-900 bg-emerald-950/40 text-emerald-400";
-  return (
-    <span className={`text-label-caps border px-2 py-0.5 text-[10px] ${cls}`}>
-      {mode === 0 ? "Direct 1:1" : "Public RFQ"}
-    </span>
   );
 }
 
@@ -621,21 +630,57 @@ function StatusBadge({ status }: { status: number }) {
   );
 }
 
-function RelativeTime({ ts }: { ts: bigint }) {
+// Color-coded urgency: red <1h, orange <24h, amber <3d, neutral otherwise.
+// Hover shows the absolute deadline. Past deadlines render muted "expired".
+function RelativeTime({ ts, status }: { ts: bigint; status: number }) {
   const seconds = Number(ts) - Math.floor(Date.now() / 1000);
-  if (seconds <= 0)
+  const absolute = new Date(Number(ts) * 1000).toLocaleString();
+
+  if (status === 1 || status === 2) {
+    // Filled or Cancelled — deadline irrelevant
     return (
-      <span className="font-mono text-xs text-zinc-600">expired</span>
+      <span
+        className="font-mono text-[11px] text-zinc-600"
+        title={`Originally expired ${absolute}`}
+      >
+        —
+      </span>
     );
-  if (seconds < 3600)
+  }
+
+  if (seconds <= 0) {
     return (
-      <span className="font-mono text-xs">{Math.floor(seconds / 60)}m</span>
+      <span
+        className="font-mono text-[11px] text-zinc-500"
+        title={`Expired ${absolute}`}
+      >
+        expired
+      </span>
     );
-  if (seconds < 86400)
-    return (
-      <span className="font-mono text-xs">{Math.floor(seconds / 3600)}h</span>
-    );
+  }
+
+  let cls = "text-zinc-300";
+  let unit: string;
+  if (seconds < 3600) {
+    cls = "text-rose-400 font-semibold";
+    unit = `${Math.max(1, Math.floor(seconds / 60))}m`;
+  } else if (seconds < 86400) {
+    cls = "text-orange-400";
+    unit = `${Math.floor(seconds / 3600)}h`;
+  } else if (seconds < 3 * 86400) {
+    cls = "text-amber-300";
+    unit = `${Math.floor(seconds / 86400)}d`;
+  } else {
+    cls = "text-emerald-300/80";
+    unit = `${Math.floor(seconds / 86400)}d`;
+  }
+
   return (
-    <span className="font-mono text-xs">{Math.floor(seconds / 86400)}d</span>
+    <span
+      className={`font-mono text-xs ${cls}`}
+      title={`Closes ${absolute}`}
+    >
+      {unit}
+    </span>
   );
 }
