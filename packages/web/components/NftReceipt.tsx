@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { CopyButton } from "./CopyButton";
 import { CornerBrackets } from "./CornerBrackets";
+import { useReceiptMint } from "@/lib/hooks/useReceiptMint";
 
 type State =
   | { kind: "idle" }
@@ -30,6 +31,16 @@ export interface NftReceiptProps {
 
 export function NftReceipt(props: NftReceiptProps) {
   const [state, setState] = useState<State>({ kind: "idle" });
+  const mint = useReceiptMint();
+
+  async function onMintOnchain() {
+    await mint.submit({
+      intentId: BigInt(props.intentId),
+      mode: props.mode,
+      settleTxHash: (props.txHash as `0x${string}` | undefined) ?? null,
+      pair: props.pair,
+    });
+  }
 
   async function generate() {
     setState({ kind: "loading" });
@@ -195,6 +206,12 @@ Built with @Chain_GPT for #iExecVibeCoding`,
             <MetadataRow label="NETWORK" value="ARB_SEPOLIA" mono />
           </div>
 
+          {/* On-chain mint */}
+          <OnchainMintPanel
+            mint={mint}
+            onMintOnchain={onMintOnchain}
+          />
+
           {/* Action buttons */}
           <div className="flex gap-2">
             <button
@@ -240,6 +257,78 @@ Built with @Chain_GPT for #iExecVibeCoding`,
         <p className="mt-3 flex items-center gap-1 font-mono text-[11px] text-[--color-danger]">
           <span className="material-symbols-outlined text-xs">error</span>
           {state.message}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function OnchainMintPanel({
+  mint,
+  onMintOnchain,
+}: {
+  mint: ReturnType<typeof useReceiptMint>;
+  onMintOnchain: () => Promise<void>;
+}) {
+  const busy = mint.step === "signing" || mint.step === "confirming";
+  const minted = mint.step === "done" && mint.tokenId !== null;
+
+  return (
+    <div className="border border-[--color-primary]/40 bg-[--color-primary]/5 p-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1">
+          <p className="text-label-caps flex items-center gap-1.5 text-[--color-primary]">
+            <span
+              className="material-symbols-outlined text-base"
+              style={{ fontVariationSettings: "'FILL' 1" }}
+            >
+              verified
+            </span>
+            On-chain Receipt
+          </p>
+          <p className="mt-1 font-mono text-[10px] leading-relaxed text-zinc-500">
+            Mint an ERC-721 keepsake on Arbitrum Sepolia. Metadata + SVG
+            stored fully on-chain — survives any off-chain image host.
+          </p>
+        </div>
+        <button
+          onClick={onMintOnchain}
+          disabled={busy || minted}
+          className="text-label-caps flex shrink-0 items-center gap-1.5 border border-[--color-primary]/40 bg-[--color-primary]/10 px-3 py-1.5 text-[--color-primary] transition-colors hover:bg-[--color-primary]/20 disabled:opacity-50"
+        >
+          <span
+            className={`material-symbols-outlined text-base ${
+              busy ? "animate-spin" : ""
+            }`}
+          >
+            {mint.step === "signing" && "draw"}
+            {mint.step === "confirming" && "sync"}
+            {mint.step === "done" && "check_circle"}
+            {(mint.step === "idle" || mint.step === "error") && "token"}
+          </span>
+          {mint.step === "signing" && "CONFIRM IN WALLET…"}
+          {mint.step === "confirming" && "MINTING…"}
+          {minted && `MINTED #${mint.tokenId!.toString()}`}
+          {(mint.step === "idle" || mint.step === "error") && "MINT ON-CHAIN"}
+        </button>
+      </div>
+
+      {minted && mint.txHash && (
+        <p className="mt-2 flex items-center gap-2 font-mono text-[10px] text-zinc-400">
+          <span className="text-[--color-primary]">✓</span>
+          <a
+            href={`https://sepolia.arbiscan.io/tx/${mint.txHash}`}
+            target="_blank"
+            rel="noreferrer"
+            className="break-all text-[--color-primary] underline hover:text-[--color-primary]/80"
+          >
+            {mint.txHash.slice(0, 10)}…{mint.txHash.slice(-8)}
+          </a>
+        </p>
+      )}
+      {mint.step === "error" && mint.error && (
+        <p className="mt-2 font-mono text-[10px] text-[--color-danger]">
+          {mint.error}
         </p>
       )}
     </div>

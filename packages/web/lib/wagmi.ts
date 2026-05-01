@@ -19,3 +19,6 @@ export const CUSDC_ADDRESS =
 
 export const CETH_ADDRESS =
   (process.env.NEXT_PUBLIC_CETH_ADDRESS as `0x${string}`) ?? "0x0";
+
+export const DIAM_RECEIPT_ADDRESS =
+  (process.env.NEXT_PUBLIC_DIAM_RECEIPT_ADDRESS as `0x${string}`) ?? "0x0";

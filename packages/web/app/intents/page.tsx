@@ -23,6 +23,8 @@ type ModeFilter = "all" | "direct" | "rfq";
 type StatusFilter = "all" | "open" | "filled" | "cancelled" | "pending";
 type PairFilter = "all" | "ceth-cusdc" | "cusdc-ceth";
 
+const PAGE_SIZE = 10;
+
 const MODE_VALUES: ModeFilter[] = ["all", "direct", "rfq"];
 const STATUS_VALUES: StatusFilter[] = [
   "all",
@@ -83,11 +85,11 @@ function IntentsLoadingSkeleton() {
 
 function IntentsPageContent() {
   const { address } = useAccount();
-  const { rows, isLoading, error } = useIntents(30);
+  const { rows, isLoading, error } = useIntents(60);
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Initialize from URL so /intents?mode=rfq&status=filled is shareable.
+  // Initialize from URL so /intents?mode=rfq&status=filled&p=2 is shareable.
   const [modeFilter, setModeFilter] = useState<ModeFilter>(() =>
     parseEnum(searchParams.get("mode"), MODE_VALUES, "all"),
   );
@@ -100,19 +102,30 @@ function IntentsPageContent() {
   const [onlyMine, setOnlyMine] = useState(
     () => searchParams.get("mine") === "1",
   );
+  const [page, setPage] = useState(() => {
+    const p = Number(searchParams.get("p") ?? "1");
+    return Number.isFinite(p) && p >= 1 ? Math.floor(p) : 1;
+  });
 
-  // Reflect filter state back into the URL so links survive page reload
-  // and browser back/forward keeps the same view. router.replace avoids
-  // pushing a new history entry per filter click.
+  // Reset to page 1 whenever a filter changes — staying on page 5 after
+  // narrowing the result set to 3 rows would render an empty table.
+  useEffect(() => {
+    setPage(1);
+  }, [modeFilter, statusFilter, pairFilter, onlyMine]);
+
+  // Reflect filter + page state back into the URL so links survive page
+  // reload and browser back/forward keeps the same view. router.replace
+  // avoids pushing a new history entry per filter / pagination click.
   useEffect(() => {
     const params = new URLSearchParams();
     if (modeFilter !== "all") params.set("mode", modeFilter);
     if (statusFilter !== "all") params.set("status", statusFilter);
     if (pairFilter !== "all") params.set("pair", pairFilter);
     if (onlyMine) params.set("mine", "1");
+    if (page !== 1) params.set("p", String(page));
     const qs = params.toString();
     router.replace(qs ? `/intents?${qs}` : "/intents", { scroll: false });
-  }, [modeFilter, statusFilter, pairFilter, onlyMine, router]);
+  }, [modeFilter, statusFilter, pairFilter, onlyMine, page, router]);
 
   const filtered = useMemo(() => {
     return rows.filter((r) => {
@@ -158,6 +171,15 @@ function IntentsPageContent() {
     (statusFilter !== "all" ? 1 : 0) +
     (pairFilter !== "all" ? 1 : 0) +
     (onlyMine ? 1 : 0);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  // Clamp without setState in render — handled by useEffect that resets
+  // on filter change. Any stale page index just produces an empty slice.
+  const safePage = Math.min(page, totalPages);
+  const pageRows = filtered.slice(
+    (safePage - 1) * PAGE_SIZE,
+    safePage * PAGE_SIZE,
+  );
 
   return (
     <AppShell>
@@ -293,7 +315,7 @@ function IntentsPageContent() {
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-800/50">
-              {filtered.map((row) => (
+              {pageRows.map((row) => (
                 <tr
                   key={row.id.toString()}
                   className="group transition-colors hover:bg-zinc-800/20"
@@ -393,16 +415,71 @@ function IntentsPageContent() {
 
           <div className="flex items-center justify-between border-t border-zinc-800 bg-zinc-900/30 px-4 py-2">
             <span className="font-mono text-[10px] text-zinc-600">
-              SHOWING {filtered.length} OF {rows.length}
+              {filtered.length === 0
+                ? "0 OF 0"
+                : `${(safePage - 1) * PAGE_SIZE + 1}–${Math.min(
+                    safePage * PAGE_SIZE,
+                    filtered.length,
+                  )} OF ${filtered.length}`}
               {activeFilterCount > 0 ? " · FILTERED" : ""}
             </span>
-            <div className="font-mono text-[10px] text-zinc-600">
-              ENCRYPTED · NOX_LAYER
-            </div>
+
+            {totalPages > 1 ? (
+              <Pagination
+                page={safePage}
+                totalPages={totalPages}
+                onChange={setPage}
+              />
+            ) : (
+              <div className="font-mono text-[10px] text-zinc-600">
+                ENCRYPTED · NOX_LAYER
+              </div>
+            )}
           </div>
         </div>
       )}
     </AppShell>
+  );
+}
+
+function Pagination({
+  page,
+  totalPages,
+  onChange,
+}: {
+  page: number;
+  totalPages: number;
+  onChange: (p: number) => void;
+}) {
+  const canPrev = page > 1;
+  const canNext = page < totalPages;
+  return (
+    <div className="flex items-center gap-1">
+      <button
+        onClick={() => canPrev && onChange(page - 1)}
+        disabled={!canPrev}
+        aria-label="Previous page"
+        className="text-label-caps flex items-center gap-1 border border-zinc-800 bg-zinc-950 px-2 py-1 text-zinc-500 transition-colors hover:border-[--color-primary] hover:text-[--color-primary] disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:border-zinc-800 disabled:hover:text-zinc-500"
+      >
+        <span className="material-symbols-outlined text-sm">chevron_left</span>
+        Prev
+      </button>
+      <span
+        className="font-mono text-[10px] text-zinc-500"
+        aria-live="polite"
+      >
+        PAGE {page} <span className="text-zinc-700">/ {totalPages}</span>
+      </span>
+      <button
+        onClick={() => canNext && onChange(page + 1)}
+        disabled={!canNext}
+        aria-label="Next page"
+        className="text-label-caps flex items-center gap-1 border border-zinc-800 bg-zinc-950 px-2 py-1 text-zinc-500 transition-colors hover:border-[--color-primary] hover:text-[--color-primary] disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:border-zinc-800 disabled:hover:text-zinc-500"
+      >
+        Next
+        <span className="material-symbols-outlined text-sm">chevron_right</span>
+      </button>
+    </div>
   );
 }
 
