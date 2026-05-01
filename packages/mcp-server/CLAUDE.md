@@ -2,9 +2,9 @@
 
 ## What is this?
 
-MCP server yang expose PrivateOTC sebagai AI-native trading tools. AI agent (Claude, Cursor, ChainGPT) bisa create intent, submit bid, decrypt balance lewat 1 prompt.
+An MCP server that exposes PrivateOTC as AI-native trading tools. AI agents (Claude, Cursor, ChainGPT) can create an intent, submit a bid, or decrypt a balance through a single prompt.
 
-Match brief hackathon: MCP listed sebagai accepted vibe-coding tool.
+Matches the hackathon brief: MCP is listed as an accepted vibe-coding tool.
 
 ## Stack
 

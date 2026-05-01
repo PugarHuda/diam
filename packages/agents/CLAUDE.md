@@ -2,13 +2,13 @@
 
 ## What is this?
 
-Autonomous agents yang "compound" trader's edge dengan jalan terus-menerus, menjaga privasi via Nox, sementara user fokus ke strategi tinggi-level.
+Autonomous agents that "compound" the trader's edge by running continuously, preserving privacy via Nox, while the user focuses on higher-level strategy.
 
 ## Agents
 
 | Agent | Trigger | Job |
 |---|---|---|
-| `market-maker` | viem watchContractEvent on `IntentCreated` | Auto-bid pada RFQ matching strategy |
+| `market-maker` | viem watchContractEvent on `IntentCreated` | Auto-bid on RFQs matching the configured strategy |
 | `rfq-sweeper` | setInterval 5 min | Finalize expired RFQs |
 | `strategy-coach` | daily cron | ChainGPT-powered trade analysis |
 | `settlement-monitor` | viem watchContractEvent on `Settled` | Post-trade audit + webhook |
@@ -46,7 +46,7 @@ PRIVATE_KEY=0x... pnpm --filter agents tsx src/seed/<script>.ts
 - **State:** Vercel KV (encrypted strategy params)
 - **AI:** ChainGPT API
 - **Validation:** zod
-- **Hosting:** Vercel Cron + Functions, atau standalone
+- **Hosting:** Vercel Cron + Functions, or standalone
 
 ## Conventions
 
@@ -54,7 +54,7 @@ PRIVATE_KEY=0x... pnpm --filter agents tsx src/seed/<script>.ts
 - Each agent exports `start{Name}()` function
 - All env vars validated via zod at startup — fail fast
 - Logs prefixed `[agent-name]` for grep-ability
-- No `console.log` di production path — pakai pino/structured logger
+- No `console.log` on production paths — use pino / a structured logger
 
 ## Run
 

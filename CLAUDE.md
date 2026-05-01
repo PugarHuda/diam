@@ -2,7 +2,7 @@
 
 ## What is this?
 
-On-chain OTC desk dengan amount terenkripsi, built on iExec Nox confidential computing protocol. Submission untuk iExec Vibe Coding Challenge (deadline 2 Mei 2026).
+On-chain OTC desk with encrypted amounts, built on the iExec Nox confidential computing protocol. Submission for the iExec Vibe Coding Challenge (deadline 2 May 2026).
 
 ## Project structure
 
@@ -53,18 +53,18 @@ pnpm mcp:dev                        # run MCP server
 
 ## Conventions
 
-- **Solidity:** 0.8.27, NatSpec untuk public/external functions, Foundry tests dengan `forge test -vvv`
+- **Solidity:** 0.8.27, NatSpec on public/external functions, Foundry tests with `forge test -vvv`
 - **TypeScript:** strict mode, no `any`, ESM imports
 - **Naming:** Solidity contracts PascalCase, TS files camelCase, components PascalCase
-- **Frontend:** Server Components by default, "use client" hanya saat butuh wallet/state
-- **Env vars:** `NEXT_PUBLIC_*` untuk frontend, no prefix untuk server
-- **Encrypted types:** prefer `euint256` untuk amounts (overkill tapi konsisten)
+- **Frontend:** Server Components by default, `"use client"` only when wallet/state is needed
+- **Env vars:** `NEXT_PUBLIC_*` for the frontend, no prefix for server-only
+- **Encrypted types:** prefer `euint256` for amounts (overkill but consistent)
 
 ## Key resources
 
 - ANALYSIS.md (parent dir) — strategic analysis
 - PROJECT-SPEC.md (parent dir) — full implementation spec
-- feedback.md — feedback for iExec team (wajib brief)
+- feedback.md — feedback for the iExec team (keep it brief)
 - https://docs.iex.ec/nox-protocol — Nox docs
 - https://docs.chaingpt.org — ChainGPT API docs
 

@@ -37,7 +37,7 @@ script/
 
 ### Encrypted state initialization
 
-Tipe `euint256` HARUS di-initialize via `Nox.toEuint256(0)`, beda dari `uint256` yang default ke 0.
+`euint256` MUST be initialized via `Nox.toEuint256(0)` — unlike `uint256`, it does not default to zero.
 
 ```solidity
 constructor() {
@@ -48,17 +48,17 @@ constructor() {
 
 ### After every encrypted op, grant permissions
 
-Setiap kali bikin handle baru (add/sub/mul/select/dst), HARUS grant access:
+Every time you produce a new handle (add/sub/mul/select/etc.), you MUST grant access:
 
 ```solidity
 balance = Nox.add(balance, amount);
-Nox.allowThis(balance);          // contract bisa pakai lagi
-Nox.allow(balance, owner);        // owner bisa decrypt off-chain
+Nox.allowThis(balance);          // contract can use it again
+Nox.allow(balance, owner);        // owner can decrypt off-chain
 ```
 
-### Branching on encrypted
+### Branching on encrypted values
 
-Tidak bisa pakai `if` pada `ebool`. Pakai `Nox.select(cond, ifTrue, ifFalse)`.
+You can't use `if` on an `ebool`. Use `Nox.select(cond, ifTrue, ifFalse)` instead.
 
 ### Vickrey loop pattern
 
@@ -70,11 +70,11 @@ for (uint i = 1; i < bids.length; i++) {
 }
 ```
 
-Cap max iter ~10 untuk gas reasonable.
+Cap iterations at ~10 to keep gas reasonable.
 
 ### Safe arithmetic
 
-`add/sub/mul/div` itu wrapping. Untuk overflow detection tanpa leak via revert, pakai `safeAdd` etc — return `(ebool success, result)`.
+`add/sub/mul/div` are wrapping. For overflow detection without leaking via revert, use `safeAdd` etc. — they return `(ebool success, result)`.
 
 ## How to run
 
@@ -107,9 +107,9 @@ forge script script/DeployReceipt.s.sol \
 
 ## Gotchas
 
-- Loop iterasi `Nox.select` mahal — cap RFQ bidder 10 max
-- `div` by zero return MAX (no revert) — selalu check denominator
-- Tipe terbatas: `euint16`/`euint256` saja (no `euint64`)
-- `externalEuint256` + bytes proof harus pas — kalau proof invalid, revert
+- `Nox.select` loop iterations are expensive — cap RFQ bidders at 10
+- `div` by zero returns `MAX` (no revert) — always check the denominator
+- Limited types: only `euint16` / `euint256` (no `euint64`)
+- `externalEuint256` + bytes proof must match — invalid proof = revert
 - `_settleAtomic` requires BOTH parties to have `setOperator(this, until)` on their respective sides — see "Operator authorization invariant" in root CLAUDE.md
 - Onchain SVG via `abi.encodePacked`: each arg = 1 stack slot. Beyond ~12 args you'll hit "Stack too deep". Split builders into helpers returning `bytes` and concat — see `_svgHead`/`_svgBody` in DiamReceipt.sol

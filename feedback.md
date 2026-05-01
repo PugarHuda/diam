@@ -1,98 +1,98 @@
 # Feedback on iExec Nox Protocol
 
-> Pengalaman builder Diam selama iExec Vibe Coding Challenge (April–Mei 2026).
-> Ditulis setelah ship: 5 git commits, 4 packages monorepo, 3 contracts deployed di Arbitrum Sepolia.
+> A Diam builder's experience during the iExec Vibe Coding Challenge (April–May 2026).
+> Written after shipping: 5 git commits, 4-package monorepo, 3 contracts deployed on Arbitrum Sepolia.
 
-## Konteks Builder
+## Builder Context
 
-- **Project:** Diam — confidential OTC desk dengan Vickrey RFQ + Compound Engineering agents + MCP server
+- **Project:** Diam — confidential OTC desk with Vickrey RFQ + Compound Engineering agents + MCP server
 - **Stack:** Solidity 0.8.27 + Foundry, Next.js 16 + Viem, `@iexec-nox/handle@0.1.0-beta.10`, `@iexec-nox/nox-protocol-contracts@0.2.2`
 - **Network:** Arbitrum Sepolia
-- **Tools utama:** Claude Code (vibe coding), ChainGPT API
+- **Primary tools:** Claude Code (vibe coding), ChainGPT API
 - **Total LOC:** ~3,800 lines across 4 packages
 
 ## What Worked Well
 
-### Hello World tutorial yang excellent
-Tutorial Piggy Bank di `docs.iex.ec/nox-protocol/getting-started/hello-world` adalah cara terbaik on-ramp ke Nox. Progressive: tulis kontrak biasa dulu, baru convert ke confidential. Setiap perubahan dijelaskan dengan rationale. Itu yang bikin saya cepat ngerti pattern `Nox.fromExternal` + `Nox.allowThis` + `Nox.allow`.
+### The Hello World tutorial is excellent
+The Piggy Bank tutorial at `docs.iex.ec/nox-protocol/getting-started/hello-world` is the best on-ramp to Nox. It's progressive: write a regular contract first, then convert it to confidential. Every change is explained with rationale. That's what helped me quickly grok the `Nox.fromExternal` + `Nox.allowThis` + `Nox.allow` pattern.
 
-### `Nox.transfer/mint/burn` primitives elegant
-Operasi `Nox.transfer(senderBalance, receiverBalance, amount) → (success, newSender, newReceiver)` sangat clean. Atomic, returns updated balances + success ebool. Saya pakai langsung di MockCToken untuk implement ERC-7984 dalam ~150 baris. Itu jauh lebih ringkas daripada implementasi FHE-based.
+### `Nox.transfer/mint/burn` primitives are elegant
+`Nox.transfer(senderBalance, receiverBalance, amount) → (success, newSender, newReceiver)` is very clean — atomic, returns updated balances + a success ebool. I used it directly in DiamCToken to implement ERC-7984 in ~180 lines. That's far more concise than FHE-based implementations.
 
 ### TypeScript SDK branded types
-`Handle<T>` di `@iexec-nox/handle` di-define sebagai `HexString & { __solidityType?: T }` — branded type yang preserve type info dari off-chain encrypt sampai contract write. TypeScript catches errors di compile time meskipun runtime cuma 32-byte hex. DX-nya sangat baik.
+`Handle<T>` in `@iexec-nox/handle` is defined as `HexString & { __solidityType?: T }` — a branded type that preserves type info from off-chain encrypt all the way to the contract write. TypeScript catches errors at compile time even though the runtime value is just a 32-byte hex. The DX is excellent.
 
-### Solidity Library API yang konsisten
-Setiap operasi (`add`, `sub`, `eq`, `gt`, `select`) ada overload untuk semua tipe (`euint16`, `euint256`, `eint16`, `eint256`). Konsisten dan predictable. `safeAdd/safeSub/safeMul/safeDiv` semua return `(ebool success, T result)` — pattern yang sama, mudah dihafal.
+### A consistent Solidity Library API
+Every operation (`add`, `sub`, `eq`, `gt`, `select`) has overloads for every type (`euint16`, `euint256`, `eint16`, `eint256`). Consistent and predictable. `safeAdd` / `safeSub` / `safeMul` / `safeDiv` all return `(ebool success, T result)` — same pattern, easy to memorize.
 
-### `_resolveUndefinedHandle` pattern clever
-Library Nox auto-resolve `bytes32(0)` jadi typed zero handle untuk type yang sesuai. Itu artinya programmer gak perlu `Nox.toEuint256(0)` setiap kali butuh zero — uninitialized euint256 already behaves as zero in arithmetic. Subtle tapi powerful.
+### The `_resolveUndefinedHandle` pattern is clever
+The Nox library auto-resolves `bytes32(0)` into a typed zero handle for the matching type. That means programmers don't have to write `Nox.toEuint256(0)` every time they need a zero — an uninitialized `euint256` already behaves as zero in arithmetic. Subtle but powerful.
 
-### Confidential token wizard di `cdefi-wizard.iex.ec`
-Generator visual untuk ERC-7984 token dengan toggle (mintable, burnable, pausable, access control) — bagus untuk bootstrap cepat. Saya akhirnya tulis MockCToken sendiri, tapi wizard adalah on-ramp yang baik untuk newcomer.
+### The confidential token wizard at `cdefi-wizard.iex.ec`
+A visual generator for ERC-7984 tokens with toggles (mintable, burnable, pausable, access control) — great for fast bootstrapping. I ended up writing my own DiamCToken in the end, but the wizard is a good on-ramp for newcomers.
 
 ## Pain Points
 
-### Tipe encrypted terbatas (cuma 16/256)
-Library cuma punya `euint16`, `euint256`, `eint16`, `eint256`. Tidak ada `euint32`, `euint64`, `euint128`. Konsekuensinya: untuk timestamp atau bps yang umumnya `uint64`, harus pakai `euint256` (overkill) atau scale manual. Perlu range tengah.
+### Encrypted types are limited (only 16 / 256)
+The library only ships `euint16`, `euint256`, `eint16`, `eint256`. There's no `euint32`, `euint64`, `euint128`. As a result, for things like timestamps or bps that are typically `uint64`, you have to use `euint256` (overkill) or scale them manually. We need a middle range.
 
 ### Doc pages "Coming Soon" / 404
-Beberapa halaman penting belum ditulis per April 2026:
+Several important pages weren't written as of April 2026:
 - `/getting-started/use-cases` — 404 / "Coming Soon"
 - `/guides/build-confidential-smart-contracts` — 404
 - `/guides/build-confidential-token` — 404
 - `/guides/manage-handle-access` — 404
 
-Hello World cukup untuk start, tapi untuk pattern advanced (e.g. handle ACL across contracts, gas optimization), harus baca source code Nox.sol langsung. Untungnya kode Nox.sol well-commented.
+Hello World is enough to get started, but for more advanced patterns (e.g. handle ACL across contracts, gas optimization), you have to read the `Nox.sol` source directly. Luckily, `Nox.sol` is well commented.
 
 ### pnpm + Foundry compatibility friction
-Default pnpm `node-linker=isolated` bikin `node_modules/.pnpm/...` deep tree, tapi Foundry remappings butuh flat `node_modules/@xxx/`. Solusinya: tambah `.npmrc` dengan `node-linker=hoisted`. Worth dokumenkan karena 80% of teams pakai pnpm + Foundry combo.
+The default pnpm `node-linker=isolated` produces a deep `node_modules/.pnpm/...` tree, but Foundry remappings need a flat `node_modules/@xxx/`. The fix: add `node-linker=hoisted` to `.npmrc`. Worth documenting because something like 80% of teams use the pnpm + Foundry combo.
 
 ### `Nox.transfer` low-level vs ERC-7984 high-level confusion
-Awalnya saya pikir `Nox.transfer(from, to, amount)` adalah ERC-20-style transfer. Ternyata itu **low-level balance update primitive** untuk implementing ERC-7984 internals. ERC-7984 cToken `confidentialTransferFrom` adalah high-level wrapper. Confusing untuk newcomer — perlu doc clarifies "this primitive is for cToken implementers, not consumers".
+At first I assumed `Nox.transfer(from, to, amount)` was an ERC-20-style transfer. It turns out it's a **low-level balance update primitive** for implementing ERC-7984 internals. The ERC-7984 cToken `confidentialTransferFrom` is the high-level wrapper. Confusing for newcomers — the docs should clarify "this primitive is for cToken implementers, not consumers".
 
-### NoxCompute proxy hardcoded per-chain bikin local testing susah
-`Nox.noxComputeContract()` hardcoded pakai chain ID. Foundry default chain `31337` tapi NoxCompute deployment di address spesifik di chain ID itu. Local Foundry test (`forge test`) crash di setUp jika constructor pakai `Nox.toEuint256(0)`. Workaround: skip Nox-using tests on non-fork, atau deploy mock NoxCompute untuk Anvil. Perlu tooling untuk auto-deploy mock NoxCompute on forge init.
+### NoxCompute proxy hardcoded per-chain makes local testing hard
+`Nox.noxComputeContract()` is hardcoded by chain ID. Foundry's default chain is `31337`, but NoxCompute is deployed at a specific address on a specific chain. Local Foundry tests (`forge test`) crash in `setUp` if the constructor calls `Nox.toEuint256(0)`. Workaround: skip Nox-using tests off-fork, or deploy a mock NoxCompute for Anvil. There should be tooling to auto-deploy a mock NoxCompute on `forge init`.
 
-### No batched encryptInput
-JS SDK `encryptInput(value, type, contract)` adalah single-value operation. Untuk OTC (encrypt sellAmount + minBuyAmount + bidAmount, dst), itu N round-trips ke Handle Gateway. Untuk RFQ dengan 10 bidder masing-masing 1 bid, itu 10 roundtrips. Perlu `encryptBatch([{value, type}, ...], contract)` API.
+### No batched `encryptInput`
+The JS SDK's `encryptInput(value, type, contract)` is a single-value operation. For OTC (encrypt sellAmount + minBuyAmount + bidAmount, etc.) that's N round-trips to the Handle Gateway. For an RFQ with 10 bidders each placing 1 bid, that's 10 round-trips. We need an `encryptBatch([{value, type}, ...], contract)` API.
 
-### Lint warning untuk acronym method names
-Forge lint (`forge-lint#mixed-case-function`) flag `createRFQ` / `finalizeRFQ` — mau ubah jadi `createRfq` / `finalizeRfq`. Untuk acronym standard (RFQ = Request For Quote, terminologi industri OTC), `createRFQ` lebih clear. Lint perlu allowlist untuk known acronyms.
+### Lint warnings on acronym method names
+Forge lint (`forge-lint#mixed-case-function`) flags `createRFQ` / `finalizeRFQ` and wants `createRfq` / `finalizeRfq`. For standard industry acronyms (RFQ = Request For Quote, common OTC terminology), `createRFQ` is more readable. The linter needs an allowlist for known acronyms.
 
-### Address handle cuma plain (no eaddress)
-Untuk Vickrey auction, kita butuh "the highest bidder's address". Tapi Nox library tidak punya `eaddress` (encrypted address) yet. Workaround: track winner index plain, lalu match dengan event off-chain. Tapi itu artinya identity bocor — gak optimal untuk full sealed-bid.
+### Address handles are plain only (no `eaddress`)
+For a Vickrey auction, you want "the highest bidder's address". But the Nox library doesn't have `eaddress` (encrypted address) yet. Workaround: track the winner index in plaintext, then match against the event off-chain. But that means identity leaks — not optimal for a fully sealed-bid auction.
 
-### SDK methods async tanpa kontekst error
-`encryptInput` throws kalau Handle Gateway down atau key invalid, tapi error message generic. Susah debug "is it my contract address wrong, my chain wrong, or gateway down?". Perlu structured errors dengan code/category.
+### Async SDK methods without error context
+`encryptInput` throws if the Handle Gateway is down or the key is invalid, but the error message is generic. Hard to debug "is it my contract address that's wrong, my chain, or is the gateway down?". Needs structured errors with code/category.
 
-### Operator authorization tidak self-explanatory di UX layer
-ERC-7984 `setOperator(spender, expiry)` adalah **per-holder, per-token** authorization — settlement contract harus jadi operator di token-nya **setiap pihak yang token-nya didebit**. Untuk bilateral trade (sellToken dari maker + buyToken dari taker) artinya 2 wallet × 2 token = bisa 4 setOperator yang berbeda. Tanpa UI yang kasih tau ini upfront, user hit revert "DiamCToken: not operator" di tx kedua mereka, after gas terbayar. Worth nge-doc pattern di Confidential Token guide: "before integrating, surface authorize state for both parties involved in any transferFrom".
+### Operator authorization isn't self-explanatory at the UX layer
+ERC-7984 `setOperator(spender, expiry)` is a **per-holder, per-token** authorization — the settlement contract has to be operator on the token of **every party whose tokens get debited**. For a bilateral trade (sellToken from maker + buyToken from taker), that's 2 wallets × 2 tokens = up to 4 different `setOperator` calls. Without UI that surfaces this upfront, users hit `"DiamCToken: not operator"` reverts on their second transaction, after they've already paid gas. Worth documenting as a pattern in the Confidential Token guide: "before integrating, surface authorize state for both parties involved in any `transferFrom`."
 
 ### Local Solidity tooling: Stack-too-deep on Base64 SVG metadata
-Ngebuild ERC-721 dengan onchain SVG tokenURI hit "Stack too deep" cepat — `abi.encodePacked` consume satu stack slot per arg, dan satu function yang bikin SVG 13+ fragment langsung over limit. `via_ir = true` di foundry.toml fix tapi compile ~10x lebih lambat. Workaround manual: split builder ke beberapa helper function yang return `bytes`. Worth dokumented untuk anyone yang mau bikin onchain metadata di confidential context (NFT receipts, audit trail tokens, etc) — pattern yang akan jadi common.
+Building an ERC-721 with onchain SVG `tokenURI` hits "Stack too deep" quickly — `abi.encodePacked` consumes one stack slot per arg, and a single function that builds an SVG with 13+ fragments goes over the limit. `via_ir = true` in `foundry.toml` fixes it but compiles ~10× slower. Manual workaround: split the builder into helper functions that each return `bytes`. Worth documenting for anyone building onchain metadata in a confidential context (NFT receipts, audit-trail tokens, etc.) — it'll be a common pattern.
 
-### Race condition: setState vs sync MetaMask popup
-`useWriteContract().writeContractAsync(...)` dari wagmi panggil `window.ethereum` sync di tick yang sama. Pattern naive `setState(image_ready); await mint.submit(...)` keliatannya sequential, tapi React batch commit di akhir microtask — sementara writeContract jalan dulu, popup MetaMask muncul **sebelum** image render. Bukan bug Nox/wagmi specifically, tapi worth ada cookbook pattern "trigger wallet ops via useEffect after state commits" — common di apps yang gabungin off-chain artifact generation (ChainGPT image, IPFS upload) + onchain commit.
+### Race condition: setState vs synchronous MetaMask popup
+wagmi's `useWriteContract().writeContractAsync(...)` calls `window.ethereum` synchronously in the same tick. The naive pattern `setState(image_ready); await mint.submit(...)` looks sequential, but React batches its commit at the end of the microtask — meanwhile `writeContract` fires first, so the MetaMask popup appears **before** the image renders. Not a Nox/wagmi bug per se, but worth a cookbook entry: "trigger wallet ops via `useEffect` after state commits". Common in apps that combine off-chain artifact generation (ChainGPT image, IPFS upload) with onchain commits.
 
 ## Suggestions
 
-### High-impact untuk hackathon experience
-1. **Tambah `euint64` minimum** — 80% dari encrypted state di DeFi typical butuh range 64-bit (timestamps, bps, amounts dengan decimals). Skip `euint32` ok.
-2. **Doc untuk "common patterns"**: payroll, OTC, vesting, auction, vault. Kombinasi primitif yang sering dipakai. Saya butuh kira-kira 4 jam reverse-engineer ini dari Nox.sol source.
-3. **`Nox.maxOf(euint256[])` helper**: untuk argmax operations (Vickrey-like, anti-MEV vault). Saya implement secara manual dengan loop + select; itu N transactions dengan gas linear.
-4. **Encrypted `eaddress` type**: untuk fully-private auction winners + private payment recipients.
-5. **Local test mock**: provide a `forge install iExec-Nox/nox-test-mock` dengan mock NoxCompute deploy hook supaya local tests bisa run encrypted ops.
+### High-impact for the hackathon experience
+1. **Add `euint64` at minimum** — 80% of encrypted state in typical DeFi needs 64-bit range (timestamps, bps, amounts with decimals). Skipping `euint32` is fine.
+2. **Docs for "common patterns"**: payroll, OTC, vesting, auction, vault. The combinations of primitives that get used a lot. It took me roughly 4 hours to reverse-engineer these from `Nox.sol` source.
+3. **`Nox.maxOf(euint256[])` helper**: for argmax operations (Vickrey-like, anti-MEV vault). I implemented it manually with loop + select — N transactions with linear gas.
+4. **An encrypted `eaddress` type**: for fully-private auction winners + private payment recipients.
+5. **Local test mock**: provide a `forge install iExec-Nox/nox-test-mock` with a mock NoxCompute deploy hook so local tests can run encrypted ops.
 
 ### Documentation
-6. Cantumkan `node-linker=hoisted` di doc untuk pnpm + Foundry users.
-7. Clarify "Nox.transfer is implementor primitive, not consumer API" di Solidity Library doc.
-8. Tambah cookbook section dengan minimal ERC-7984 implementation (~150 LOC) — komunitas perlu reference.
+6. List `node-linker=hoisted` in the docs for pnpm + Foundry users.
+7. Clarify "Nox.transfer is an implementor primitive, not a consumer API" in the Solidity Library docs.
+8. Add a cookbook section with a minimal ERC-7984 implementation (~150 LOC) — the community needs a reference.
 
 ### JS SDK
-9. `encryptBatch([{value, type}, ...], contract)` untuk reduce roundtrip latency.
-10. Structured errors dengan `code: 'GATEWAY_DOWN' | 'INVALID_PROOF' | ...`.
-11. Helper `viewOwnBalance(token, account)` yang combine `confidentialBalanceOf` + `decrypt` jadi 1 call.
+9. `encryptBatch([{value, type}, ...], contract)` to reduce round-trip latency.
+10. Structured errors with `code: 'GATEWAY_DOWN' | 'INVALID_PROOF' | ...`.
+11. A `viewOwnBalance(token, account)` helper that combines `confidentialBalanceOf` + `decrypt` into a single call.
 
 ## Comparison vs Alternatives
 
@@ -103,25 +103,25 @@ Ngebuild ERC-721 dengan onchain SVG tokenURI hit "Stack too deep" cepat — `abi
 | **Key management** | iExec KMS + ECDH | Zama KMS + threshold decryption | User-side proving |
 | **Tooling maturity** | New (V0.1.0 April 2026) | Mature (FHEVM live ~1 year) | Mature (Aztec mainnet) |
 | **DX (TS SDK)** | 9/10 (branded types, 4 methods) | 7/10 (tfhe-rs ergonomic but heavy) | 7/10 (Noir DSL learning curve) |
-| **Solidity primitives** | 9/10 (clean overloads) | 8/10 (FHE math heavier) | n/a (Noir, not Solidity) |
+| **Solidity primitives** | 9/10 (clean overloads) | 8/10 (FHE math is heavier) | n/a (Noir, not Solidity) |
 
-Untuk OTC use case kami, Nox menang karena: (a) composable dengan ERC-20/7984, (b) gas reasonable untuk Vickrey loop dengan 10 bidder, (c) standard Solidity tooling.
+For our OTC use case, Nox wins because: (a) it's composable with ERC-20/7984, (b) gas is reasonable for a Vickrey loop with 10 bidders, and (c) it uses standard Solidity tooling.
 
 ## ChainGPT Integration Notes
 
-- API key flow lewat Telegram (@vladnazarxyz) untuk hackathon — perlu UI yang lebih friction-less untuk produksi.
-- `https://api.chaingpt.org/chat/stream` accept Bearer auth, return SSE.
-- Smart Contract Auditor wrap pretty well lewat NPM package `@chaingpt/smartcontractauditor`. Kita pakai fetch direct biar edge-runtime compatible di Vercel. Akhirnya kita **drop** auditor dari frontend karena invocation rate dari user testing effectively zero — output-nya gak drive product decision. Kept advisor / signal / NFT receipt image yang muncul in-flow.
-- NFT generator (`https://api.chaingpt.org/nft-generator`, model `velogen`) cocok banget untuk receipt artwork — output 512×512 yang langsung visual signature trade-nya, gak butuh post-processing.
+- The API key flow goes through Telegram (`@vladnazarxyz`) for the hackathon — needs friction-less UI for production.
+- `https://api.chaingpt.org/chat/stream` accepts Bearer auth and returns SSE.
+- The Smart Contract Auditor wraps cleanly via the `@chaingpt/smartcontractauditor` NPM package. We used direct fetch for edge-runtime compatibility on Vercel. We ended up **dropping** the auditor from the frontend because invocation rate during user testing was effectively zero — the output didn't drive any product decisions. We kept advisor / signal / NFT receipt image features that surface in-flow.
+- The NFT generator (`https://api.chaingpt.org/nft-generator`, model `velogen`) is a great fit for receipt artwork — output is 512×512 with a clear visual signature of the trade, no post-processing needed.
 
-## Apa yang akan kami bangun selanjutnya
+## What we'd build next
 
-Diam adalah seed. Roadmap:
-- Multi-chain deployment (Optimism, Base) setelah Nox expand.
+Diam is a seed. Roadmap:
+- Multi-chain deployment (Optimism, Base) once Nox expands.
 - Real-time MEV-resistant order matching (off-chain solver, on-chain settlement).
-- Compound Engineering agent marketplace (deploy your own bot, share strategy templates encrypted).
-- ERC-3643 compliance integration setelah ERC standard mature.
+- A Compound Engineering agent marketplace (deploy your own bot, share strategy templates encrypted).
+- ERC-3643 compliance integration once the standard matures.
 
 ---
 
-Terima kasih iExec team untuk Nox + tooling + hackathon. Excited untuk lihat protocol mature 🔒
+Thanks to the iExec team for Nox + tooling + the hackathon. Excited to see the protocol mature 🔒
