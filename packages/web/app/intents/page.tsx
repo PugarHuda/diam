@@ -271,18 +271,22 @@ function IntentsPageContent() {
 
           <table className="w-full table-fixed text-left">
             <colgroup>
-              <col className="w-[72px]" />
+              <col className="w-[80px]" />
               <col className="w-auto" />
-              <col className="w-[140px]" />
-              <col className="w-[110px]" />
-              <col className="w-[110px]" />
+              <col className="w-[88px]" />
+              <col className="w-[112px]" />
               <col className="w-[120px]" />
+              <col className="w-[100px]" />
+              <col className="w-[80px]" />
+              <col className="w-[88px]" />
             </colgroup>
             <thead>
               <tr className="border-b border-zinc-800 bg-zinc-900/50">
-                <Th>#</Th>
+                <Th>Intent ID</Th>
                 <Th>Sell → Buy</Th>
+                <Th>Mode</Th>
                 <Th>Maker</Th>
+                <Th>Volume</Th>
                 <Th>Status</Th>
                 <Th>Expires</Th>
                 <Th align="right">Action</Th>
@@ -296,25 +300,10 @@ function IntentsPageContent() {
                 >
                   <Td>
                     <span
-                      className="flex items-center gap-1.5"
-                      title={
-                        row.mode === 1
-                          ? "Vickrey RFQ — sealed-bid auction"
-                          : "Direct OTC — bilateral 1:1 trade"
-                      }
+                      className="font-mono text-xs text-zinc-300"
+                      title={`Intent #${row.id.toString()}`}
                     >
-                      <span
-                        className={`material-symbols-outlined text-base ${
-                          row.mode === 1
-                            ? "text-emerald-400/70"
-                            : "text-orange-400/70"
-                        }`}
-                      >
-                        {row.mode === 1 ? "gavel" : "handshake"}
-                      </span>
-                      <span className="font-mono text-xs text-zinc-300">
-                        #{row.id.toString()}
-                      </span>
+                      #IX_{row.id.toString().padStart(4, "0")}
                     </span>
                   </Td>
 
@@ -328,18 +317,38 @@ function IntentsPageContent() {
                   </Td>
 
                   <Td>
+                    <ModeBadge mode={row.mode} />
+                  </Td>
+
+                  <Td>
                     <span
-                      className="flex items-center gap-1.5 font-mono text-[11px] text-zinc-500"
+                      className="flex items-center gap-1 font-mono text-[11px] text-zinc-500"
                       title={row.maker}
                     >
-                      {shortAddress(row.maker, 4)}
+                      <span className="truncate">
+                        {shortAddress(row.maker, 4)}
+                      </span>
                       {address &&
                         row.maker.toLowerCase() ===
                           address.toLowerCase() && (
-                          <span className="text-label-caps border border-[--color-primary]/40 bg-[--color-primary]/10 px-1 py-0.5 text-[8px] text-[--color-primary]">
+                          <span className="text-label-caps shrink-0 border border-[--color-primary]/40 bg-[--color-primary]/10 px-1 py-0 text-[8px] text-[--color-primary]">
                             YOU
                           </span>
                         )}
+                    </span>
+                  </Td>
+
+                  <Td>
+                    <span
+                      className="flex items-center gap-1 border border-zinc-800 bg-zinc-950 px-1.5 py-0.5 font-mono text-[10px] text-zinc-600"
+                      title={row.sellAmountHandle}
+                    >
+                      <span className="material-symbols-outlined shrink-0 text-sm text-[--color-primary]/40">
+                        lock
+                      </span>
+                      <span className="truncate">
+                        {row.sellAmountHandle.slice(0, 8)}…
+                      </span>
                     </span>
                   </Td>
 
@@ -359,7 +368,7 @@ function IntentsPageContent() {
                             ? `/rfq/${row.id.toString()}`
                             : `/intents/${row.id.toString()}`) as Route
                         }
-                        className="text-label-caps inline-flex items-center border border-zinc-800 bg-zinc-900 px-2.5 py-1 text-[--color-primary] transition-all hover:bg-[--color-primary] hover:text-[--color-primary-fg]"
+                        className="text-label-caps inline-flex items-center border border-zinc-800 bg-zinc-900 px-2 py-1 text-[--color-primary] transition-all hover:bg-[--color-primary] hover:text-[--color-primary-fg]"
                       >
                         {row.mode === 1 ? "Bid" : "Accept"}
                       </Link>
@@ -608,6 +617,21 @@ function Legend({ color, label }: { color: string; label: string }) {
         {label}
       </span>
     </div>
+  );
+}
+
+function ModeBadge({ mode }: { mode: number }) {
+  const cls =
+    mode === 0
+      ? "border-orange-900 bg-orange-950/40 text-orange-400"
+      : "border-emerald-900 bg-emerald-950/40 text-emerald-400";
+  return (
+    <span
+      className={`text-label-caps inline-block border px-1.5 py-0.5 text-[10px] ${cls}`}
+      title={mode === 0 ? "Direct OTC — bilateral 1:1" : "Vickrey RFQ auction"}
+    >
+      {mode === 0 ? "Direct" : "RFQ"}
+    </span>
   );
 }
 
