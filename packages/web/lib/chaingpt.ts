@@ -142,32 +142,62 @@ export interface PriceCheck {
 /**
  * Sanity-check trade pricing using ChainGPT's market awareness.
  *
- * Real ChainGPT response shape:
- *   ```json
- *   {"fairPriceUsd": 2300.18, "rationale": "Current market price..."}
- *   ```
- * Returned wrapped in markdown code fence — must strip.
+ * Critical detail: ChainGPT doesn't recognize "c"-prefixed confidential
+ * token symbols (cETH, cUSDC) — it returns "info not available" because
+ * those tickers don't exist in market data. Since confidential wrappers
+ * are 1:1 with the underlying, we strip the c prefix before asking and
+ * ask for the underlying pair price (ETH/USDC, etc.).
+ *
+ * We also drop the user's intended price from the prompt because
+ * LLMs anchor responses on user-suggested numbers, producing inconsistent
+ * fair prices across calls.
  */
 export async function checkFairPrice(
   pair: string,
   yourPriceUsd: number,
 ): Promise<PriceCheck> {
-  const raw = await askChainGPT({
-    model: "general_assistant",
-    question: `What is the current fair market price (USD) for ${pair}? My intended trade price is $${yourPriceUsd}. Reply ONLY strict JSON, no markdown: {"fairPriceUsd": number, "rationale": "short explanation"}`,
-  });
+  // cETH/cUSDC → ETH/USDC, cAAPL/cUSDC → AAPL/USDC, etc.
+  const normalizedPair = pair.replace(/\bc(?=[A-Z])/g, "");
 
-  let fairPriceUsd = yourPriceUsd;
-  let rationale = "ChainGPT response could not be parsed";
+  let fairPriceUsd = 0;
+  let rationale = "";
 
-  const parsed = parseFencedJson<{ fairPriceUsd: number; rationale: string }>(
-    raw,
-  );
-  if (parsed) {
-    if (typeof parsed.fairPriceUsd === "number") {
+  // Up to 2 attempts with slightly different prompts — LLMs occasionally
+  // refuse first time but answer when reframed.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const reframed =
+      attempt === 0
+        ? `Current spot mid price in USD for the ${normalizedPair} pair on major DEXs / CEXs.`
+        : `Approximate USD market price for ${normalizedPair} as of today. If unsure, give a best estimate based on recent ranges.`;
+
+    const raw = await askChainGPT({
+      model: "general_assistant",
+      question: `${reframed} Reply ONLY strict JSON, no markdown, no commentary: {"fairPriceUsd": <number greater than 0>, "rationale": "<one short sentence>"}`,
+    });
+
+    const parsed = parseFencedJson<{
+      fairPriceUsd: number;
+      rationale: string;
+    }>(raw);
+
+    if (
+      parsed &&
+      typeof parsed.fairPriceUsd === "number" &&
+      Number.isFinite(parsed.fairPriceUsd) &&
+      parsed.fairPriceUsd > 0
+    ) {
       fairPriceUsd = parsed.fairPriceUsd;
+      rationale =
+        parsed.rationale ?? `Current ${normalizedPair} market price`;
+      break;
     }
-    if (parsed.rationale) rationale = parsed.rationale;
+  }
+
+  // Graceful fallback if both attempts fail — assume user's price is the
+  // reference so delta = 0% (don't show a bogus "off market" warning).
+  if (fairPriceUsd <= 0) {
+    fairPriceUsd = yourPriceUsd;
+    rationale = `Live ${normalizedPair} price unavailable from ChainGPT — confirm against an external oracle (Chainlink, CoinGecko)`;
   }
 
   const deltaBps = safeDeltaBps(yourPriceUsd, fairPriceUsd) ?? 0;

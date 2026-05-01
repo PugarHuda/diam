@@ -15,6 +15,9 @@
     "seed": "tsx src/seed/index.ts",
     "seed-multi": "tsx src/seed/seed-multi.ts",
     "seed-bids": "tsx src/seed/seed-bids.ts",
+    "seed-30d": "tsx src/seed/seed-30d-demo.ts",
+    "seed-check": "tsx src/seed/check-balances.ts",
+    "seed-settled": "tsx src/seed/seed-settled-examples.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage"

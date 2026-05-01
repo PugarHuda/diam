@@ -259,33 +259,47 @@ describe("checkFairPrice", () => {
       mockFetchOk("totally not json");
       const r = await checkFairPrice("ETH/USDC", 3500);
       expect(r.fairPriceUsd).toBe(3500);
-      expect(r.rationale).toContain("could not be parsed");
+      expect(r.rationale).toContain("unavailable");
       expect(r.deltaBps).toBe(0);
     });
 
     test("falls back when JSON.parse throws (matched but unparseable)", async () => {
       // The regex /\{[\s\S]*?\}/ matches "{not valid}", but JSON.parse rejects it.
-      // This exercises the catch block on line 156-158.
       mockFetchOk("{not valid json at all}");
       const r = await checkFairPrice("ETH/USDC", 3500);
       expect(r.fairPriceUsd).toBe(3500);
-      expect(r.rationale).toContain("could not be parsed");
+      expect(r.rationale).toContain("unavailable");
     });
 
-    test("ignores non-numeric fairPriceUsd in payload", async () => {
+    test("ignores non-numeric fairPriceUsd in payload (retries then falls back)", async () => {
       mockFetchOk('{"fairPriceUsd": "not-a-number", "rationale": "ok"}');
       const r = await checkFairPrice("ETH/USDC", 3500);
-      expect(r.fairPriceUsd).toBe(3500); // fallback to yourPriceUsd
-      expect(r.rationale).toBe("ok");
+      expect(r.fairPriceUsd).toBe(3500); // fallback to yourPriceUsd after both retries fail validation
+      expect(r.rationale).toContain("unavailable");
+    });
+
+    test("ignores zero / negative fairPriceUsd (retries then falls back)", async () => {
+      mockFetchOk('{"fairPriceUsd": 0, "rationale": "ok"}');
+      const r = await checkFairPrice("ETH/USDC", 3500);
+      expect(r.fairPriceUsd).toBe(3500); // fallback because 0 is not > 0
+      expect(r.rationale).toContain("unavailable");
     });
   });
 
   describe("edge cases", () => {
-    test("uses default rationale when payload has no rationale field", async () => {
+    test("uses default rationale when payload has no rationale field but valid price", async () => {
       mockFetchOk('{"fairPriceUsd": 3500}');
       const r = await checkFairPrice("ETH/USDC", 3500);
       expect(r.fairPriceUsd).toBe(3500);
-      expect(r.rationale).toContain("could not be parsed");
+      expect(r.rationale).toContain("market price");
+    });
+
+    test("strips c-prefix from confidential token symbols in normalized pair", async () => {
+      mockFetchOk('{"fairPriceUsd": 3500, "rationale": "spot price"}');
+      const r = await checkFairPrice("cETH/cUSDC", 3500);
+      expect(r.fairPriceUsd).toBe(3500);
+      // pair return value preserves original input (UI shows what user gave)
+      expect(r.pair).toBe("cETH/cUSDC");
     });
 
     test("warning fires at exactly 501 bps (just above threshold)", async () => {

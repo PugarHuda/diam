@@ -75,6 +75,14 @@ export function useCreateRfq() {
 
   useEffect(() => {
     if (receipt.data && state.step === "confirming") {
+      if (receipt.data.status === "reverted") {
+        setState((s) => ({
+          ...s,
+          step: "error",
+          error: "Transaction reverted on-chain — check Arbiscan for details",
+        }));
+        return;
+      }
       const id = parseIntentCreatedId(
         receipt.data.logs as never,
         decodeEventLog as never,
@@ -83,8 +91,14 @@ export function useCreateRfq() {
         setIntentId(id);
         setState((s) => ({ ...s, step: "done" }));
       }
+    } else if (receipt.isError && state.step === "confirming") {
+      setState((s) => ({
+        ...s,
+        step: "error",
+        error: receipt.error?.message?.split("\n")[0] ?? "Receipt fetch failed",
+      }));
     }
-  }, [receipt.data, state.step]);
+  }, [receipt.data, receipt.isError, receipt.error, state.step]);
 
   return { submit, ...state, intentId };
 }
@@ -121,10 +135,24 @@ export function useAcceptIntent() {
   }
 
   useEffect(() => {
-    if (receipt.isSuccess && state.step === "confirming") {
-      setState((s) => ({ ...s, step: "done" }));
+    if (receipt.data && state.step === "confirming") {
+      if (receipt.data.status === "reverted") {
+        setState((s) => ({
+          ...s,
+          step: "error",
+          error: "Transaction reverted on-chain — check Arbiscan for details",
+        }));
+      } else {
+        setState((s) => ({ ...s, step: "done" }));
+      }
+    } else if (receipt.isError && state.step === "confirming") {
+      setState((s) => ({
+        ...s,
+        step: "error",
+        error: receipt.error?.message?.split("\n")[0] ?? "Receipt fetch failed",
+      }));
     }
-  }, [receipt.isSuccess, state.step]);
+  }, [receipt.data, receipt.isError, receipt.error, state.step]);
 
   return { submit, ...state };
 }
@@ -161,10 +189,24 @@ export function useSubmitBid() {
   }
 
   useEffect(() => {
-    if (receipt.isSuccess && state.step === "confirming") {
-      setState((s) => ({ ...s, step: "done" }));
+    if (receipt.data && state.step === "confirming") {
+      if (receipt.data.status === "reverted") {
+        setState((s) => ({
+          ...s,
+          step: "error",
+          error: "Transaction reverted on-chain — check Arbiscan for details",
+        }));
+      } else {
+        setState((s) => ({ ...s, step: "done" }));
+      }
+    } else if (receipt.isError && state.step === "confirming") {
+      setState((s) => ({
+        ...s,
+        step: "error",
+        error: receipt.error?.message?.split("\n")[0] ?? "Receipt fetch failed",
+      }));
     }
-  }, [receipt.isSuccess, state.step]);
+  }, [receipt.data, receipt.isError, receipt.error, state.step]);
 
   return { submit, ...state };
 }
@@ -194,10 +236,24 @@ export function useFinalizeRfq() {
   }
 
   useEffect(() => {
-    if (receipt.isSuccess && state.step === "confirming") {
-      setState((s) => ({ ...s, step: "done" }));
+    if (receipt.data && state.step === "confirming") {
+      if (receipt.data.status === "reverted") {
+        setState((s) => ({
+          ...s,
+          step: "error",
+          error: "Transaction reverted on-chain — check Arbiscan for details",
+        }));
+      } else {
+        setState((s) => ({ ...s, step: "done" }));
+      }
+    } else if (receipt.isError && state.step === "confirming") {
+      setState((s) => ({
+        ...s,
+        step: "error",
+        error: receipt.error?.message?.split("\n")[0] ?? "Receipt fetch failed",
+      }));
     }
-  }, [receipt.isSuccess, state.step]);
+  }, [receipt.data, receipt.isError, receipt.error, state.step]);
 
   return { submit, ...state };
 }
@@ -230,10 +286,24 @@ export function useRevealRfqWinner() {
   }
 
   useEffect(() => {
-    if (receipt.isSuccess && state.step === "confirming") {
-      setState((s) => ({ ...s, step: "done" }));
+    if (receipt.data && state.step === "confirming") {
+      if (receipt.data.status === "reverted") {
+        setState((s) => ({
+          ...s,
+          step: "error",
+          error: "Transaction reverted on-chain — check Arbiscan for details",
+        }));
+      } else {
+        setState((s) => ({ ...s, step: "done" }));
+      }
+    } else if (receipt.isError && state.step === "confirming") {
+      setState((s) => ({
+        ...s,
+        step: "error",
+        error: receipt.error?.message?.split("\n")[0] ?? "Receipt fetch failed",
+      }));
     }
-  }, [receipt.isSuccess, state.step]);
+  }, [receipt.data, receipt.isError, receipt.error, state.step]);
 
   return { submit, ...state };
 }
@@ -263,10 +333,24 @@ export function useCancelIntent() {
   }
 
   useEffect(() => {
-    if (receipt.isSuccess && state.step === "confirming") {
-      setState((s) => ({ ...s, step: "done" }));
+    if (receipt.data && state.step === "confirming") {
+      if (receipt.data.status === "reverted") {
+        setState((s) => ({
+          ...s,
+          step: "error",
+          error: "Transaction reverted on-chain — check Arbiscan for details",
+        }));
+      } else {
+        setState((s) => ({ ...s, step: "done" }));
+      }
+    } else if (receipt.isError && state.step === "confirming") {
+      setState((s) => ({
+        ...s,
+        step: "error",
+        error: receipt.error?.message?.split("\n")[0] ?? "Receipt fetch failed",
+      }));
     }
-  }, [receipt.isSuccess, state.step]);
+  }, [receipt.data, receipt.isError, receipt.error, state.step]);
 
   return { submit, ...state };
 }

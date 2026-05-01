@@ -58,12 +58,14 @@ export default function RfqDetailPage({
   const reveal = useRevealRfqWinner();
   const toast = useToast();
 
-  // Surface tx outcomes via toasts as soon as state transitions.
+  // Surface tx outcomes via toasts AND refetch on-chain state so UI reflects
+  // status transitions (Open → PendingReveal → Filled) without a page reload.
   useEffect(() => {
     if (reveal.step === "done" && reveal.txHash) {
       toast.success("Winner revealed — settlement complete", {
         href: `https://sepolia.arbiscan.io/tx/${reveal.txHash}`,
       });
+      intentQuery.refetch();
     } else if (reveal.step === "error" && reveal.error) {
       toast.error(`Reveal failed: ${reveal.error}`);
     }
@@ -75,6 +77,7 @@ export default function RfqDetailPage({
       toast.success("Auction frozen — awaiting maker reveal", {
         href: `https://sepolia.arbiscan.io/tx/${finalize.txHash}`,
       });
+      intentQuery.refetch();
     } else if (finalize.step === "error" && finalize.error) {
       toast.error(`Finalize failed: ${finalize.error}`);
     }
@@ -86,6 +89,7 @@ export default function RfqDetailPage({
       toast.success("Sealed bid submitted", {
         href: `https://sepolia.arbiscan.io/tx/${submitBid.txHash}`,
       });
+      bidsQuery.refetch();
     } else if (submitBid.step === "error" && submitBid.error) {
       toast.error(`Bid failed: ${submitBid.error}`);
     }
