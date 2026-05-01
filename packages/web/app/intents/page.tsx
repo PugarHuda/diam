@@ -236,7 +236,7 @@ export default function IntentsPage() {
               <thead>
                 <tr className="border-b border-zinc-800 bg-zinc-900/50">
                   <Th>Intent ID</Th>
-                  <Th>Pair</Th>
+                  <Th>Sell → Buy</Th>
                   <Th>Mode</Th>
                   <Th>Maker</Th>
                   <Th>Volume (Encrypted)</Th>
@@ -257,22 +257,44 @@ export default function IntentsPage() {
                       </span>
                     </Td>
                     <Td>
-                      <div className="flex items-center gap-2">
-                        <TokenIcon
-                          symbol={
-                            TOKEN_NAMES[row.sellToken.toLowerCase()] ?? "?"
-                          }
-                          size="sm"
-                        />
-                        <span className="material-symbols-outlined text-sm text-zinc-600">
+                      <div className="flex items-center gap-3 whitespace-nowrap">
+                        <div className="flex items-center gap-1.5">
+                          <span
+                            className="text-label-caps text-rose-400/80"
+                            title="Maker is selling this token"
+                          >
+                            SELL
+                          </span>
+                          <TokenIcon
+                            symbol={
+                              TOKEN_NAMES[row.sellToken.toLowerCase()] ?? "?"
+                            }
+                            size="sm"
+                          />
+                          <span className="font-mono text-xs text-zinc-200">
+                            {TOKEN_NAMES[row.sellToken.toLowerCase()] ?? "?"}
+                          </span>
+                        </div>
+                        <span className="material-symbols-outlined text-base text-zinc-600">
                           arrow_forward
                         </span>
-                        <TokenIcon
-                          symbol={
-                            TOKEN_NAMES[row.buyToken.toLowerCase()] ?? "?"
-                          }
-                          size="sm"
-                        />
+                        <div className="flex items-center gap-1.5">
+                          <span
+                            className="text-label-caps text-emerald-400/80"
+                            title="Maker wants to receive this token"
+                          >
+                            BUY
+                          </span>
+                          <TokenIcon
+                            symbol={
+                              TOKEN_NAMES[row.buyToken.toLowerCase()] ?? "?"
+                            }
+                            size="sm"
+                          />
+                          <span className="font-mono text-xs text-zinc-200">
+                            {TOKEN_NAMES[row.buyToken.toLowerCase()] ?? "?"}
+                          </span>
+                        </div>
                       </div>
                     </Td>
                     <Td>
