@@ -289,6 +289,28 @@ export default function HomePage() {
                   GitHub repository
                 </a>
                 <a
+                  href="https://youtu.be/_tMBT32r_kQ"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-1.5 text-zinc-500 transition-colors hover:text-[--color-primary]"
+                >
+                  <span className="material-symbols-outlined text-sm">
+                    play_circle
+                  </span>
+                  Demo video
+                </a>
+                <a
+                  href="https://x.com/BangDropID/status/2050295042296984047"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-1.5 text-zinc-500 transition-colors hover:text-[--color-primary]"
+                >
+                  <span className="material-symbols-outlined text-sm">
+                    share
+                  </span>
+                  Twitter post
+                </a>
+                <a
                   href="https://docs.iex.ec/nox-protocol/getting-started/welcome"
                   target="_blank"
                   rel="noreferrer"
