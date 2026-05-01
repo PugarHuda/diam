@@ -457,14 +457,17 @@ export default function IntentDetailPage({
                   accept.step === "encrypting" ||
                   accept.step === "signing" ||
                   accept.step === "confirming" ||
+                  accept.step === "done" ||
                   !settleReady
                 }
                 title={
-                  !takerBuyAuth.isOperator
-                    ? `Authorize Diam for ${buyTok?.symbol ?? "buy token"} first`
-                    : makerSellAuth.isOperator === false
-                      ? `Maker hasn't authorized ${sellTok?.symbol ?? "sell token"} — settlement will revert`
-                      : undefined
+                  accept.step === "done"
+                    ? "Trade settled — see the receipt below"
+                    : !takerBuyAuth.isOperator
+                      ? `Authorize Diam for ${buyTok?.symbol ?? "buy token"} first`
+                      : makerSellAuth.isOperator === false
+                        ? `Maker hasn't authorized ${sellTok?.symbol ?? "sell token"} — settlement will revert`
+                        : undefined
                 }
                 className="diam-btn-primary w-full py-4 text-sm"
               >

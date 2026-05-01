@@ -35,11 +35,16 @@ export interface NftReceiptProps {
 export function NftReceipt(props: NftReceiptProps) {
   const { address } = useAccount();
   const [state, setState] = useState<State>({ kind: "idle" });
+  // True when the user has clicked MINT and we want to fire the on-chain
+  // tx as soon as the image (success or failure) has rendered. Triggering
+  // mint inline after `setState` would race the React commit — MetaMask
+  // would pop up before the image paints. Watching this flag in a
+  // useEffect ordered AFTER the image render guarantees the visual lands
+  // first, then the wallet prompt.
+  const [pendingMint, setPendingMint] = useState(false);
   const mint = useReceiptMint();
   const existing = useExistingReceipt(BigInt(props.intentId), address);
 
-  // After a fresh mint commits, refetch the existing-receipt query so
-  // the UI reflects the new tokenId without a page reload.
   useEffect(() => {
     if (mint.step === "done" && mint.tokenId !== null) {
       existing.refresh();
@@ -47,16 +52,37 @@ export function NftReceipt(props: NftReceiptProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mint.step, mint.tokenId]);
 
-  // Single-click flow: generate the ChainGPT image, then immediately
-  // mint the on-chain ERC-721. Image is the off-chain visual; the NFT
-  // is the on-chain audit-trail keepsake. We don't gate the mint on
-  // image success — even if ChainGPT errors, the on-chain mint still
-  // commits the receipt with the canonical SVG metadata.
+  // Fire the on-chain mint AFTER the image-generation phase resolves
+  // (either ok or error) and the image render has committed. The
+  // `state.kind !== "generating-image"` guard ensures we don't fire
+  // while still loading; pendingMint is the user-intent flag.
+  useEffect(() => {
+    if (!pendingMint) return;
+    if (state.kind === "generating-image") return;
+    setPendingMint(false);
+    void mint.submit({
+      intentId: BigInt(props.intentId),
+      mode: props.mode,
+      settleTxHash: (props.txHash as `0x${string}` | undefined) ?? null,
+      pair: props.pair,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingMint, state.kind]);
+
+  // Single-click flow: kick off ChainGPT image, mark the user as wanting
+  // a mint, then let the effect above launch the wallet prompt only
+  // after the image has painted.
   async function mintReceipt() {
-    if (existing.alreadyMinted || mint.step === "signing" || mint.step === "confirming") {
+    if (
+      existing.alreadyMinted ||
+      pendingMint ||
+      mint.step === "signing" ||
+      mint.step === "confirming"
+    ) {
       return;
     }
     setState({ kind: "generating-image" });
+    setPendingMint(true);
     try {
       const res = await fetch("/api/chaingpt/nft-receipt", {
         method: "POST",
@@ -67,7 +93,6 @@ export function NftReceipt(props: NftReceiptProps) {
         const data = await res.json();
         setState({ kind: "ok", ...data });
       } else {
-        // Don't block on-chain mint just because ChainGPT image fails.
         const err = await res.json().catch(() => ({ error: res.statusText }));
         setState({
           kind: "error",
@@ -80,13 +105,7 @@ export function NftReceipt(props: NftReceiptProps) {
         message: `Image generation failed: ${err instanceof Error ? err.message : String(err)} — proceeding with on-chain mint anyway.`,
       });
     }
-
-    await mint.submit({
-      intentId: BigInt(props.intentId),
-      mode: props.mode,
-      settleTxHash: (props.txHash as `0x${string}` | undefined) ?? null,
-      pair: props.pair,
-    });
+    // pendingMint is true → effect above runs once state.kind !== "generating-image"
   }
 
   function download() {

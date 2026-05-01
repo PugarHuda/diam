@@ -470,7 +470,13 @@ export default function RfqDetailPage({
                 disabled={
                   submitBid.step === "encrypting" ||
                   submitBid.step === "signing" ||
-                  submitBid.step === "confirming"
+                  submitBid.step === "confirming" ||
+                  submitBid.step === "done"
+                }
+                title={
+                  submitBid.step === "done"
+                    ? "Bid already submitted — wait for auction to close"
+                    : undefined
                 }
                 className="diam-btn-primary flex w-full items-center justify-center gap-2 py-4 text-sm"
               >

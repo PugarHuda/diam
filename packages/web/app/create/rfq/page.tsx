@@ -223,11 +223,13 @@ export default function RfqCreatePage() {
 
               <button
                 type="submit"
-                disabled={busy || !sellTokenAuth.isOperator}
+                disabled={busy || step === "done" || !sellTokenAuth.isOperator}
                 title={
-                  !sellTokenAuth.isOperator && address
-                    ? `Authorize Diam for ${sellTok.symbol} above first`
-                    : undefined
+                  step === "done"
+                    ? "Already broadcast — see the link above to view the RFQ"
+                    : !sellTokenAuth.isOperator && address
+                      ? `Authorize Diam for ${sellTok.symbol} above first`
+                      : undefined
                 }
                 className="diam-btn-primary flex w-full items-center justify-center gap-2 py-4 text-sm"
               >
