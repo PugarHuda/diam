@@ -21,6 +21,13 @@ export default defineConfig({
         "lib/hooks/useFaucet.ts",
         "lib/hooks/useCreateIntent.ts",
         "lib/hooks/useOtcWrites.ts",
+        // Same pattern: pure-React hooks wrapping wagmi reads/writes +
+        // viem getLogs. No business logic to test in isolation —
+        // behavior is exercised end-to-end by the manual demo flow.
+        "lib/hooks/useSetOperator.ts",
+        "lib/hooks/useSettledTaker.ts",
+        "lib/hooks/useReceiptMint.ts",
+        "lib/hooks/useExistingReceipt.ts",
       ],
       thresholds: {
         lines: 100,
