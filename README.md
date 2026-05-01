@@ -14,6 +14,7 @@ Submission for the [iExec Vibe Coding Challenge](https://dorahacks.io/hackathon/
 |---|---|
 | 🚀 **Live demo** | https://private-otc.vercel.app |
 | 🎥 **Demo video** | https://youtu.be/_tMBT32r_kQ |
+| 🐦 **Twitter post** | https://x.com/BangDropID/status/2050295042296984047 |
 | 📦 **Source** | https://github.com/PugarHuda/diam |
 | 📡 **Network** | Arbitrum Sepolia (chain id `421614`) |
 | 🔑 **Stack** | Next.js 16 · Solidity 0.8.27 · iExec Nox · ChainGPT · MCP |

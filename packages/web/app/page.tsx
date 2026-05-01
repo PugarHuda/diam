@@ -62,7 +62,7 @@ export default function HomePage() {
               composable with any ERC-20.
             </p>
 
-            <div className="flex flex-col justify-center gap-4 sm:flex-row fade-up fade-up-3">
+            <div className="flex flex-col flex-wrap justify-center gap-4 sm:flex-row fade-up fade-up-3">
               <Link href={"/intents" as Route}>
                 <button className="diam-btn-primary glow-on-hover px-8 py-4 text-sm">
                   <span className="flex items-center gap-2">
@@ -70,6 +70,30 @@ export default function HomePage() {
                       play_arrow
                     </span>
                     Launch App
+                  </span>
+                </button>
+              </Link>
+              <a
+                href="https://youtu.be/_tMBT32r_kQ"
+                target="_blank"
+                rel="noreferrer"
+              >
+                <button className="diam-btn-secondary px-8 py-4 text-sm">
+                  <span className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-base">
+                      play_circle
+                    </span>
+                    Watch Demo
+                  </span>
+                </button>
+              </a>
+              <Link href={"/slides" as Route}>
+                <button className="diam-btn-secondary px-8 py-4 text-sm">
+                  <span className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-base">
+                      slideshow
+                    </span>
+                    View Pitch
                   </span>
                 </button>
               </Link>
@@ -87,16 +111,6 @@ export default function HomePage() {
                   </span>
                 </button>
               </a>
-              <Link href={"/slides" as Route}>
-                <button className="diam-btn-secondary px-8 py-4 text-sm">
-                  <span className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-base">
-                      slideshow
-                    </span>
-                    View Pitch
-                  </span>
-                </button>
-              </Link>
             </div>
           </div>
 

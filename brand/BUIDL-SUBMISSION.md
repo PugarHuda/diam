@@ -94,7 +94,7 @@ Confidential OTC on iExec Nox. Trade amounts stay encrypted on-chain via TEE; a 
 | GitHub | https://github.com/PugarHuda/diam |
 | Live demo | https://private-otc.vercel.app |
 | Demo video | https://youtu.be/_tMBT32r_kQ |
-| Twitter post | _(coming soon — to be added)_ |
+| Twitter post | https://x.com/BangDropID/status/2050295042296984047 |
 | Network | Arbitrum Sepolia (chain id 421614) |
 | PrivateOTC contract | `0x5b2C0c83e41bF9ef072d742096C49DFDB814CEB4` |
 | cUSDC | `0x57736B816F6cb53c6B2c742D3A162E89Db162ADE` |
