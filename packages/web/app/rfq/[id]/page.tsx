@@ -9,6 +9,7 @@ import { AppShell } from "@/components/AppShell";
 import { PageHeader, SectionHeader } from "@/components/PageHeader";
 import { NftReceipt } from "@/components/NftReceipt";
 import { SkeletonCard } from "@/components/Skeleton";
+import { OperatorAuth } from "@/components/OperatorAuth";
 import { privateOtcAbi } from "@/lib/abi/privateOtc";
 import { PRIVATE_OTC_ADDRESS, CUSDC_ADDRESS, CETH_ADDRESS } from "@/lib/wagmi";
 import {
@@ -330,15 +331,23 @@ export default function RfqDetailPage({
 
         <aside className="col-span-12 space-y-4 lg:col-span-5">
           {!isMaker && isOpen && !isExpired && (
-            <form onSubmit={onSubmitBid} className="glass-card space-y-4 p-6">
-              <p className="text-label-caps flex items-center gap-2 text-[--color-primary]">
-                <span className="h-1.5 w-1.5 bg-[--color-primary]" />
-                Submit Sealed Bid
-              </p>
-              <p className="font-mono text-[11px] leading-relaxed text-zinc-500">
-                Bid honestly — Vickrey rules guarantee you only pay the
-                second-highest price if you win
-              </p>
+            <>
+              <OperatorAuth
+                token={rfq.buyToken}
+                account={address}
+                symbol={buyTok?.symbol ?? "buy token"}
+                reason={`If you win this Vickrey auction, settlement pulls ${buyTok?.symbol ?? "your buy token"} from your wallet to the maker. Diam needs operator permission on this cToken first — one-time, lasts 60 days.`}
+              />
+
+              <form onSubmit={onSubmitBid} className="glass-card space-y-4 p-6">
+                <p className="text-label-caps flex items-center gap-2 text-[--color-primary]">
+                  <span className="h-1.5 w-1.5 bg-[--color-primary]" />
+                  Submit Sealed Bid
+                </p>
+                <p className="font-mono text-[11px] leading-relaxed text-zinc-500">
+                  Bid honestly — Vickrey rules guarantee you only pay the
+                  second-highest price if you win
+                </p>
 
               <div className="space-y-2">
                 <label className="text-label-caps text-zinc-500">
@@ -415,7 +424,8 @@ export default function RfqDetailPage({
                   "SUBMIT SEALED BID"}
                 {submitBid.step === "done" && "SUBMITTED"}
               </button>
-            </form>
+              </form>
+            </>
           )}
 
           {isOpen && isExpired && bids.length >= 2 && (

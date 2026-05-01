@@ -10,6 +10,7 @@ import { PageHeader, SectionHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { TokenIcon } from "@/components/TokenIcon";
 import { HelpHint } from "@/components/Tooltip";
+import { OperatorAuth } from "@/components/OperatorAuth";
 import { useFaucet } from "@/lib/hooks/useFaucet";
 import { CUSDC_ADDRESS, CETH_ADDRESS } from "@/lib/wagmi";
 
@@ -29,7 +30,7 @@ const TOKENS = [
 ];
 
 export default function FaucetPage() {
-  const { isConnected } = useAccount();
+  const { address, isConnected } = useAccount();
   const { mint, step, error, txHash } = useFaucet();
 
   const [selected, setSelected] = useState(TOKENS[0]);
@@ -56,6 +57,23 @@ export default function FaucetPage() {
           title="CONNECT WALLET TO MINT"
           body="A connected wallet on Arbitrum Sepolia is required"
         />
+      )}
+
+      {isConnected && address && (
+        <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+          <OperatorAuth
+            token={CUSDC_ADDRESS}
+            account={address}
+            symbol="cUSDC"
+            compact
+          />
+          <OperatorAuth
+            token={CETH_ADDRESS}
+            account={address}
+            symbol="cETH"
+            compact
+          />
+        </div>
       )}
 
       {isConnected && (

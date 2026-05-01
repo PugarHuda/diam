@@ -11,6 +11,7 @@ import { TokenIcon } from "@/components/TokenIcon";
 import { NftReceipt } from "@/components/NftReceipt";
 import { SkeletonCard } from "@/components/Skeleton";
 import { useToast } from "@/components/Toast";
+import { OperatorAuth } from "@/components/OperatorAuth";
 import { privateOtcAbi } from "@/lib/abi/privateOtc";
 import { PRIVATE_OTC_ADDRESS, CUSDC_ADDRESS, CETH_ADDRESS } from "@/lib/wagmi";
 import { useAcceptIntent, useCancelIntent } from "@/lib/hooks/useOtcWrites";
@@ -316,15 +317,23 @@ export default function IntentDetailPage({
           )}
 
           {!isMaker && isOpen && !isExpired && (
-            <form onSubmit={onAccept} className="glass-card space-y-4 p-6">
-              <p className="text-label-caps flex items-center gap-2 text-[--color-primary]">
-                <span className="h-1.5 w-1.5 bg-[--color-primary]" />
-                Accept + Settle
-              </p>
-              <p className="font-mono text-[11px] leading-relaxed text-zinc-500">
-                Submit your buy amount. Encrypted via Nox. If below maker's
-                hidden minimum, trade settles atomically as no-op (Strategy B).
-              </p>
+            <>
+              <OperatorAuth
+                token={intent.buyToken}
+                account={address}
+                symbol={buyTok?.symbol ?? "buy token"}
+                reason={`Accept settlement pulls ${buyTok?.symbol ?? "your buy token"} from your wallet to the maker. Diam needs operator permission on this cToken first — one-time, lasts 60 days.`}
+              />
+
+              <form onSubmit={onAccept} className="glass-card space-y-4 p-6">
+                <p className="text-label-caps flex items-center gap-2 text-[--color-primary]">
+                  <span className="h-1.5 w-1.5 bg-[--color-primary]" />
+                  Accept + Settle
+                </p>
+                <p className="font-mono text-[11px] leading-relaxed text-zinc-500">
+                  Submit your buy amount. Encrypted via Nox. If below maker's
+                  hidden minimum, trade settles atomically as no-op (Strategy B).
+                </p>
 
               <div className="space-y-2">
                 <label className="text-label-caps text-zinc-500">
@@ -417,7 +426,8 @@ export default function IntentDetailPage({
                   "ACCEPT + SETTLE"}
                 {accept.step === "done" && "SETTLED ✓"}
               </button>
-            </form>
+              </form>
+            </>
           )}
 
           {!isOpen && (
