@@ -489,17 +489,35 @@ export default function IntentDetailPage({
             </div>
           )}
 
-          {(intent.status === 1 || accept.step === "done") && (
-            <NftReceipt
-              pair={`${TOKEN_NAMES[intent.sellToken.toLowerCase()]?.symbol ?? "?"}/${TOKEN_NAMES[intent.buyToken.toLowerCase()]?.symbol ?? "?"}`}
-              intentId={id}
-              mode="Direct"
-              txHash={accept.txHash ?? undefined}
-              makerAddress={intent.maker}
-              sellHandle={intent.sellAmountHandle}
-              timestamp={Date.now()}
-            />
-          )}
+          {(intent.status === 1 || accept.step === "done") &&
+            (isMaker || accept.step === "done") && (
+              <NftReceipt
+                pair={`${TOKEN_NAMES[intent.sellToken.toLowerCase()]?.symbol ?? "?"}/${TOKEN_NAMES[intent.buyToken.toLowerCase()]?.symbol ?? "?"}`}
+                intentId={id}
+                mode="Direct"
+                txHash={accept.txHash ?? undefined}
+                makerAddress={intent.maker}
+                sellHandle={intent.sellAmountHandle}
+                timestamp={Date.now()}
+              />
+            )}
+          {intent.status === 1 &&
+            !isMaker &&
+            accept.step !== "done" && (
+              <div className="border border-zinc-800 bg-zinc-900/30 p-4">
+                <p className="text-label-caps flex items-center gap-2 text-zinc-500">
+                  <span className="material-symbols-outlined text-base">
+                    visibility
+                  </span>
+                  Read-only view
+                </p>
+                <p className="mt-2 font-mono text-[11px] text-zinc-500">
+                  This trade has settled. Only the maker or the taker who
+                  filled it can mint the on-chain receipt — other observers
+                  see the audit trail but not the keepsake.
+                </p>
+              </div>
+            )}
         </aside>
       </div>
     </AppShell>

@@ -729,16 +729,34 @@ export default function RfqDetailPage({
             </div>
           )}
 
-          {(rfq.status === 1 || reveal.step === "done") && (
-            <NftReceipt
-              pair={`${sellSym}/${buyTok?.symbol ?? "?"}`}
-              intentId={id}
-              mode="RFQ"
-              txHash={reveal.txHash ?? finalize.txHash ?? undefined}
-              makerAddress={rfq.maker}
-              timestamp={Date.now()}
-            />
-          )}
+          {(rfq.status === 1 || reveal.step === "done") &&
+            (isMaker || reveal.step === "done") && (
+              <NftReceipt
+                pair={`${sellSym}/${buyTok?.symbol ?? "?"}`}
+                intentId={id}
+                mode="RFQ"
+                txHash={reveal.txHash ?? finalize.txHash ?? undefined}
+                makerAddress={rfq.maker}
+                timestamp={Date.now()}
+              />
+            )}
+          {rfq.status === 1 &&
+            !isMaker &&
+            reveal.step !== "done" && (
+              <div className="border border-zinc-800 bg-zinc-900/30 p-4">
+                <p className="text-label-caps flex items-center gap-2 text-zinc-500">
+                  <span className="material-symbols-outlined text-base">
+                    visibility
+                  </span>
+                  Read-only view
+                </p>
+                <p className="mt-2 font-mono text-[11px] text-zinc-500">
+                  Auction settled. Only the maker (and the winning bidder
+                  who decrypted the price) can mint the on-chain receipt —
+                  other observers see the audit trail only.
+                </p>
+              </div>
+            )}
 
           <div className="glass-card border-l-2 border-l-[--color-primary] p-6">
             <div className="mb-3 flex items-center gap-3">
