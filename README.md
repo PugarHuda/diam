@@ -77,7 +77,8 @@ flowchart TB
     end
 
     style ContractsAPI fill:#0a0a0a,stroke:#00ff41,stroke-width:2px,color:#00ff41
-    style Nox fill:#0a0a0a,stroke:#7c3aed,stroke-width:2px,color:#7c3aed
+    style Receipt fill:#0a0a0a,stroke:#00ff41,stroke-width:1px,color:#00ff41
+    style Nox fill:#0a0a0a,stroke:#00e639,stroke-width:2px,color:#00e639
     style CGT fill:#0a0a0a,stroke:#ff6b6b,stroke-width:1px,color:#ff6b6b
 ```
 

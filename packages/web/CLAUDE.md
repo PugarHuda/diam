@@ -85,12 +85,13 @@ pnpm lint                   # next lint
 
 ## Design System
 
-- **Theme:** Stark minimal + gradient trust (navy → soft purple)
-- **Primary:** `--color-accent` `#7c3aed` (violet-600)
+- **Theme:** Terminal/matrix — stark dark surfaces with neon-green accents
+- **Primary:** `--color-primary` `#00ff41` (matrix green) — matches the favicon `app/icon.svg`
+- **Primary FG:** `--color-primary-fg` `#002203` (dark green for text on primary fill)
 - **Bg:** `--color-bg` `#0a0a0f` (near-black)
 - **Surface:** `--color-surface` `#12121a`
-- **Font:** Inter (UI) + JetBrains Mono (numbers)
-- **Tone:** institutional confident — bukan playful crypto
+- **Font:** Inter (UI) + JetBrains Mono (numbers, hashes, labels)
+- **Tone:** institutional confident, terminal/cyberpunk — bukan playful crypto
 - **Hero copy:** "Your trade. Their guess. Nobody knows."
 
 ## Don't

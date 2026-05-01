@@ -54,6 +54,7 @@ The solution: Diam
 ✅ Hidden amounts (Nox confidential computing on Arbitrum Sepolia)
 ✅ Vickrey-fair RFQ (highest bid wins, pays second-highest, encrypted)
 ✅ Atomic settlement via ERC-7984
+✅ Onchain ERC-721 trade receipts (Base64 SVG, no IPFS)
 ✅ Composable with any ERC-20
 
 Same outcome as GSR's first confidential OTC. On-chain, permissionless.
@@ -72,9 +73,11 @@ Three layers, vibe-coded:
 
 ### Tweet 5
 ```
-Built solo in 5 days using Claude Code, @Chain_GPT, and the iExec Nox SDK.
+Built solo using Claude Code, @Chain_GPT, and the iExec Nox SDK.
 
 Strategy B (atomic safeSub + select) means failed bids settle as no-ops, on-chain — privacy-preserving even on rejection.
+
+Each settled trade mints an ERC-721 receipt straight to your wallet — image and metadata fully onchain via Base64 SVG. No IPFS, no link rot.
 
 Full feedback for the @iEx_ec team in the repo.
 
@@ -94,10 +97,11 @@ Why this matters: confidential DeFi unlocks the $30T of institutional capital th
 
 ## Visual assets to attach
 
-- 30-second video clip (best moment from demo: Vickrey reveal animation)
-- Screenshot of /create/rfq form with form filled in
-- Screenshot of Etherscan showing IntentCreated event with bytes32 amount handle
-- Architecture diagram (3 layers stacked)
+- 30-second video clip (best moment from demo: Vickrey reveal animation, then NFT receipt mint)
+- Screenshot of /create/rfq form with `<OperatorAuth>` banner visible
+- Screenshot of Arbiscan showing `IntentCreated` event with bytes32 amount handle
+- Screenshot of a minted DiamReceipt NFT on Arbiscan (token detail page with onchain SVG rendered)
+- Architecture diagram (4 layers stacked: MCP, Compound Engineering, Core Protocol, Receipt)
 
 ## Final checklist before posting
 

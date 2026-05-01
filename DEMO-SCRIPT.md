@@ -7,10 +7,11 @@
 
 - [ ] OBS Studio configured 1080p/30fps + microphone test
 - [ ] Browser: Chrome incognito, MetaMask connected ke Arbitrum Sepolia
-- [ ] Wallet 1 (Maker): funded with 0.05 ETH, has cUSDC + cETH minted from faucet
-- [ ] Wallet 2 (Taker): funded, has cUSDC minted
-- [ ] Diam frontend running: `pnpm dev` on localhost:3000
-- [ ] Etherscan tab open: https://sepolia.arbiscan.io/address/0x32C6552b0FB40833568ECb44aF70A44059FE3FF5
+- [ ] Wallet 1 (Maker): funded with 0.05 ETH, has cUSDC + cETH minted from faucet, **OperatorAuth banner already clicked for both tokens**
+- [ ] Wallet 2 (Taker): funded, has cUSDC + cETH minted, **OperatorAuth banner already clicked for both tokens**
+- [ ] Diam frontend running: `pnpm dev` on localhost:3000 (or hit https://private-otc.vercel.app)
+- [ ] Arbiscan tab open on PrivateOTC: https://sepolia.arbiscan.io/address/0xBD27DABa875aF238Fc7f2848B23904c99Ae5A563
+- [ ] Arbiscan tab open on DiamReceipt: https://sepolia.arbiscan.io/address/0xE011E57ff89a9b1450551A7cE402b75c5Bd27B85
 - [ ] Uniswap tab open with ETH/USDC swap pre-loaded for the "pain" comparison
 - [ ] Telegram screenshot of OTC desk chat (use mockup if don't have real one)
 - [ ] Script printed beside monitor
@@ -47,38 +48,62 @@
 ## Scene 3 — The Demo (1:15 → 2:45, 90s)
 
 **Visual:**
-- 1:15 — Cut to Diam landing page on localhost:3000. Highlight tagline: "Your trade. Their guess. Nobody knows."
-- 1:22 — Wallet 1 (Maker): connect wallet, click Faucet. Mint 100 cETH. Highlight that amount is encrypted on-chain via Nox.
-- 1:32 — Click "Create Intent" → "RFQ Mode". Form: sell 50 cETH for cUSDC, deadline 1 hour.
-- 1:42 — Click submit. Show encrypting animation, then MetaMask sign, then tx confirm. "Encrypted in TEE, settled on Arbitrum, gas paid in ETH."
-- 1:55 — Cut to Etherscan tx: "IntentCreated" event visible. Highlight: amount field is bytes32 handle, not plaintext.
-- 2:05 — Switch to Wallet 2 (Taker 1). Browse intents → see new RFQ with asset pair only. Submit sealed bid: 175,000 cUSDC. Encrypted, signed.
-- 2:18 — Repeat for Wallet 3 (Taker 2): bid 180,000. Wallet 4 (Taker 3): bid 178,000.
-- 2:28 — Wait for deadline (or warp via Foundry). Click "Finalize RFQ". Show Vickrey logic running on-chain. Cut to dramatic reveal: "Winner: Taker 2, pays $178,000 (second-highest bid, not the $180K they bid)."
-- 2:38 — Cut to /portfolio. Maker decrypts received cUSDC → shows actual amount they got. Other accounts can't decrypt — shows "Access denied".
+- 1:15 — Cut to Diam landing page (matrix-green theme, terminal aesthetic). Highlight tagline: "Your trade. Their guess. Nobody knows."
+- 1:20 — `/intents` orderbook: paginated list with status filters (Open / Filled / Cancelled / Pending). Click filter `status=open` — URL updates to `?status=open` (shareable). Mention "10 rows per page, prev/next, all on-chain."
+- 1:28 — Wallet 1 (Maker): click Faucet. Two amber `<OperatorAuth>` banners visible — one per token. Click each: "60-day approval, one tx each". Mint 100 cETH. Note encrypted on-chain via Nox.
+- 1:38 — Click "Create Intent" → "RFQ Mode". The create form's submit button is disabled with tooltip "Authorize cETH first" until the operator banner above is clicked — then enables. Form: sell 50 cETH for cUSDC, deadline 1 hour. Submit.
+- 1:48 — Encrypting animation, MetaMask sign, tx confirm. "Encrypted in TEE, settled on Arbitrum."
+- 1:55 — Cut to Arbiscan tx: "IntentCreated" event visible. Amount field is `bytes32` handle, not plaintext.
+- 2:02 — Switch to Wallet 2 (Taker 1). Browse intents (paginated) → click into the new RFQ. Submit sealed bid: 175,000 cUSDC. Encrypted, signed.
+- 2:14 — Repeat for Wallet 3 (Taker 2): bid 180,000. Wallet 4 (Taker 3): bid 178,000.
+- 2:24 — Wait for deadline (or warp via Foundry). Click "COMPUTE SECOND-PRICE" (`finalizeRFQ`). Status flips to **PendingReveal**.
+- 2:30 — Maker reopens `/rfq/[id]`, clicks "Decrypt N bids via Nox", sees plaintext amounts. Per-bidder operator status is shown (red badge if a bidder hadn't authorized — picking them would revert). Click "Pick as winner" on highest. `revealRFQWinner` settles.
+- 2:38 — Cut to `/portfolio`: maker decrypts received cUSDC → shows the actual amount. Other accounts can't decrypt — "Access denied".
 
 **Voice-over (90s):**
-> "Now watch this. Diam, built on iExec Nox, deployed on Arbitrum Sepolia. I'm the maker. I mint a hundred confidential ETH from the faucet — already encrypted, no one sees the amount.
+> "Now watch this. Diam, built on iExec Nox, deployed on Arbitrum Sepolia. The orderbook is paginated, filterable by status, and shareable via URL. I'm the maker. The faucet shows me an authorize banner per token — one click each, sixty-day approval — so settlement never reverts mid-trade.
 >
-> I open an RFQ to sell fifty cETH for cUSDC. One hour bidding window. Submit. Encrypted via Nox in a Trusted Execution Environment, posted on-chain. On Etherscan you see the IntentCreated event — but the amount is a 32-byte handle, not a number.
+> I open an RFQ to sell fifty cETH for cUSDC. One hour bidding window. The create form locks until I've authorized — no dead-on-arrival intents. Submit. Encrypted via Nox in a Trusted Execution Environment, posted on-chain. On Arbiscan you see the IntentCreated event — but the amount is a 32-byte handle, not a number.
 >
 > Three takers see the asset pair, not the size. They submit sealed bids — encrypted at home, on-chain only as ciphertext.
 >
-> Deadline hits. Anyone calls finalize. Vickrey logic runs entirely on encrypted values: highest wins, pays second-highest. The winner is revealed by address — but the price they pay stays encrypted on-chain. Maker decrypts and sees what they received. Public Etherscan? Sees a settle event with bytes32 amounts. Nothing else."
+> Deadline hits. Anyone calls finalize: Vickrey logic computes the encrypted second-price on-chain. Status becomes PendingReveal. The maker decrypts each bid client-side, picks the highest by index, and reveals the winner. Settlement transfers fifty confidential ETH from maker to winner, and the encrypted second-highest price the other way. Public Arbiscan? Sees a Settled event with bytes32 amounts. Nothing else."
 
 ---
 
-## Scene 4 — Beyond the Trade (2:45 → 3:30, 45s)
+## Scene 4 — Onchain Receipts + Beyond (2:45 → 3:30, 45s)
 
 **Visual:**
-- 2:45 — Cut to Claude Code terminal. Type: `/otc-create cETH cUSDC 100`. Show MCP server invocation.
-- 2:55 — Claude responds with intent ID + tx hash. "AI agent just created an OTC intent on my behalf, encrypted, on-chain."
-- 3:05 — Cut to terminal showing MarketMaker agent log: `[market-maker] new RFQ #42 on cETH/cUSDC, evaluating bid… [market-maker] bid submitted on RFQ #42: tx=0x... pair=cETH/cUSDC (encrypted amount, refPrice=$3500)`
-- 3:15 — Quick montage of: ChainGPT advisor showing fair-price check, RFQ Sweeper finalizing expired auction, MCP server browseIntents response.
-- 3:23 — Architecture diagram: 3 layers stacked — MCP Plugin (top), Compound Engineering Agents (middle), Core Protocol (bottom).
+- 2:45 — Back on the settled RFQ page. Scroll to the "On-chain NFT
+  Receipt" card. Click **MINT RECEIPT**.
+- 2:50 — ChainGPT image renders inline (gradient art with intent
+  metadata overlays — pair, mode, fingerprint, NOX_TEE badge). Then
+  MetaMask popup appears.
+- 2:55 — Confirm — `DiamReceipt.mint(intentId, mode, txHash, pair)`.
+  Receipt panel switches to "MINTED #N → Arbiscan". Call out: "Fully
+  onchain SVG, no IPFS, this NFT survives any image host going dark."
+- 3:02 — Cut to Claude Code terminal: `/otc-create cETH cUSDC 100`.
+  MCP server invocation. Claude responds with intent ID + tx hash.
+- 3:12 — Terminal showing MarketMaker agent log: `[market-maker] new
+  RFQ #42 on cETH/cUSDC, evaluating bid… [market-maker] bid submitted
+  on RFQ #42: tx=0x... pair=cETH/cUSDC (encrypted amount, refPrice=$3500)`
+- 3:20 — Quick montage of: ChainGPT advisor showing fair-price check,
+  RFQ Sweeper finalizing expired auction, MCP server browseIntents.
+- 3:25 — Architecture diagram: 4 layers — MCP, Compound Engineering,
+  Core Protocol, Receipt Layer.
 
 **Voice-over (45s):**
-> "But trades are just primitives. The real value is what runs on top. Diam ships three layers. The Core Protocol — Solidity contracts and a Next.js frontend. A Compound Engineering layer — autonomous agents that bid for you, sweep expired RFQs, and analyze your trades nightly via ChainGPT. And an MCP server — so AI agents like Claude or Cursor can trade through Diam with one prompt. Vibe coding all the way down."
+> "Settlement isn't the end. One click mints an ERC-721 receipt straight
+> to your wallet — image and metadata fully onchain via Base64-encoded
+> SVG, no IPFS, no off-chain host that can disappear. The mint is
+> idempotent: the button hides on revisit because the contract event log
+> already proves you own a receipt for this trade.
+>
+> And trades themselves are just primitives. Diam ships four layers: the
+> Core Protocol, an onchain Receipt layer, a Compound Engineering layer
+> with autonomous agents that bid and sweep on your behalf, and an MCP
+> server so Claude or Cursor can trade through Diam with one prompt.
+> Vibe coding all the way down."
 
 ---
 

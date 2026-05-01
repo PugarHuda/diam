@@ -66,6 +66,15 @@ Untuk Vickrey auction, kita butuh "the highest bidder's address". Tapi Nox libra
 ### SDK methods async tanpa kontekst error
 `encryptInput` throws kalau Handle Gateway down atau key invalid, tapi error message generic. Susah debug "is it my contract address wrong, my chain wrong, or gateway down?". Perlu structured errors dengan code/category.
 
+### Operator authorization tidak self-explanatory di UX layer
+ERC-7984 `setOperator(spender, expiry)` adalah **per-holder, per-token** authorization — settlement contract harus jadi operator di token-nya **setiap pihak yang token-nya didebit**. Untuk bilateral trade (sellToken dari maker + buyToken dari taker) artinya 2 wallet × 2 token = bisa 4 setOperator yang berbeda. Tanpa UI yang kasih tau ini upfront, user hit revert "DiamCToken: not operator" di tx kedua mereka, after gas terbayar. Worth nge-doc pattern di Confidential Token guide: "before integrating, surface authorize state for both parties involved in any transferFrom".
+
+### Local Solidity tooling: Stack-too-deep on Base64 SVG metadata
+Ngebuild ERC-721 dengan onchain SVG tokenURI hit "Stack too deep" cepat — `abi.encodePacked` consume satu stack slot per arg, dan satu function yang bikin SVG 13+ fragment langsung over limit. `via_ir = true` di foundry.toml fix tapi compile ~10x lebih lambat. Workaround manual: split builder ke beberapa helper function yang return `bytes`. Worth dokumented untuk anyone yang mau bikin onchain metadata di confidential context (NFT receipts, audit trail tokens, etc) — pattern yang akan jadi common.
+
+### Race condition: setState vs sync MetaMask popup
+`useWriteContract().writeContractAsync(...)` dari wagmi panggil `window.ethereum` sync di tick yang sama. Pattern naive `setState(image_ready); await mint.submit(...)` keliatannya sequential, tapi React batch commit di akhir microtask — sementara writeContract jalan dulu, popup MetaMask muncul **sebelum** image render. Bukan bug Nox/wagmi specifically, tapi worth ada cookbook pattern "trigger wallet ops via useEffect after state commits" — common di apps yang gabungin off-chain artifact generation (ChainGPT image, IPFS upload) + onchain commit.
+
 ## Suggestions
 
 ### High-impact untuk hackathon experience
@@ -102,7 +111,8 @@ Untuk OTC use case kami, Nox menang karena: (a) composable dengan ERC-20/7984, (
 
 - API key flow lewat Telegram (@vladnazarxyz) untuk hackathon — perlu UI yang lebih friction-less untuk produksi.
 - `https://api.chaingpt.org/chat/stream` accept Bearer auth, return SSE.
-- Smart Contract Auditor wrap pretty well lewat NPM package `@chaingpt/smartcontractauditor` — kita pakai fetch direct biar edge-runtime compatible di Vercel.
+- Smart Contract Auditor wrap pretty well lewat NPM package `@chaingpt/smartcontractauditor`. Kita pakai fetch direct biar edge-runtime compatible di Vercel. Akhirnya kita **drop** auditor dari frontend karena invocation rate dari user testing effectively zero — output-nya gak drive product decision. Kept advisor / signal / NFT receipt image yang muncul in-flow.
+- NFT generator (`https://api.chaingpt.org/nft-generator`, model `velogen`) cocok banget untuk receipt artwork — output 512×512 yang langsung visual signature trade-nya, gak butuh post-processing.
 
 ## Apa yang akan kami bangun selanjutnya
 

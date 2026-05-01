@@ -72,17 +72,28 @@ What just happened:
 
 Before Diam can move tokens between you and a counterparty, you authorize it as an **operator** on each cToken (similar to ERC-20 `approve`, but time-bound).
 
-> **Note:** UI for setOperator is forthcoming. For now, call `cToken.setOperator(diamAddr, deadline)` directly — or skip and try Direct OTC with self-acceptance via 2 wallets.
+The faucet page now ships an `<OperatorAuth>` banner per token. After
+minting (Step 2), you'll see two amber blocks — one for cUSDC, one for
+cETH — each with a **Authorize Diam (cUSDC, 60d)** button. Click each
+once. MetaMask prompts a single tx per token (calls
+`cToken.setOperator(PrivateOTC, now + 60 days)`); the banner auto-flips
+to green once the receipt lands and never bothers you again until the
+60-day expiry. The same banner also appears on `/create/direct`,
+`/create/rfq`, `/intents/[id]`, and `/rfq/[id]` — anywhere a missing
+operator would otherwise turn into a "DiamCToken: not operator" revert.
 
-Direct call (using `cast` or Etherscan):
-```
-cast send 0xb0a42fEf01c0B9A2C264024483B6716A5AD6fA04 \
+> **Why both tokens?** Settlement pulls sell-side from the maker AND
+> buy-side from the taker, so each party needs to be authorized on the
+> token they're sending out. Authorizing both upfront covers maker +
+> taker roles in any future trade.
+
+Manual fallback (rarely needed):
+```bash
+cast send 0xb690aaDa4e23620D0dcDE4c493BC1D90F791aB3F \
   "setOperator(address,uint48)" \
-  0x32C6552b0FB40833568ECb44aF70A44059FE3FF5 \
-  $((`date +%s` + 86400))
+  0xBD27DABa875aF238Fc7f2848B23904c99Ae5A563 \
+  $((`date +%s` + 5184000))    # +60 days
 ```
-
-This grants Diam contract permission to move your cUSDC for 24h.
 
 ---
 
@@ -116,25 +127,33 @@ What's now on-chain:
 
 Open in a **second wallet** (or another browser profile) to play taker:
 
-1. Go to **Trade** (sidebar)
-2. See your intent in the order book — pair visible, amount masked as `[NOX]` handle
-3. Click **Accept** on the intent
+1. Go to **Active Intents** (sidebar)
+2. The orderbook shows **10 rows per page** with prev/next + page indicator,
+   filterable by mode (Direct / RFQ), status (Open / Pending / Filled /
+   Cancelled), pair, and "Mine only". Filter state is shareable via URL
+   params (`/intents?status=open&mode=rfq&p=2`).
+3. Click **Accept** on a Direct intent
 4. On the detail page:
    - Inspect the manifest (status, maker, encrypted handles, expires)
+   - The page also surfaces operator readiness: a red banner appears if
+     the maker hasn't authorized their sellToken (the trade would revert
+     — UI blocks submit + tells you why).
    - Enter your bid (e.g. `3500` cUSDC)
-   - Click **ACCEPT + SETTLE**
+   - Click **ACCEPT + SETTLE**. Button stays disabled until both sides'
+     `setOperator` is in place.
 5. Wallet signs:
    - Encrypts your bid via Nox
    - Calls `acceptIntent(id, handle, proof)` on PrivateOTC
    - **Strategy B fires:** `safeSub(buyAmount, minBuyAmount)` checks sufficiency, `select` routes real amounts (or zeros if insufficient) — atomic
    - cTokens transfer atomically: cETH → you, cUSDC → maker
-6. Trade settled. Status: **Filled**
+6. Trade settled. Status: **Filled**. The button switches to "SETTLED ✓"
+   and is locked — no accidental re-submits.
 
 > **Privacy property:** if your bid was below maker's minimum, the trade is marked `Filled` BUT actual amounts transferred are encrypted zeros. Etherscan observers cannot distinguish a successful trade from a no-op rejection. That's Strategy B.
 
 ---
 
-## Step 7 — RFQ Mode (Vickrey Auction)
+## Step 7 — RFQ Mode (Vickrey Auction, 2-step)
 
 For multi-bidder execution:
 
@@ -143,32 +162,56 @@ For multi-bidder execution:
 3. Notice the **MarketSignal** sidebar — ChainGPT bias indicator (Bullish/Bearish/Neutral) for the pair
 4. Submit → RFQ opens, deadline counts down
 5. Multiple takers go to `/rfq/[id]` and submit sealed bids (encrypted, max 10 bidders)
-6. After deadline, anyone calls **FINALIZE RFQ**
-7. On-chain Vickrey logic:
+6. After deadline, anyone calls **COMPUTE SECOND-PRICE** (`finalizeRFQ`).
+   Status flips to **PendingReveal**.
+7. On-chain Vickrey logic computes the encrypted second price:
    ```solidity
    for (uint i = 1; i < bids.length; i++) {
      ebool isHigher = Nox.gt(candidate, highest);
-     second  = Nox.select(isHigher, highest, second);
+     ebool isMiddle = Nox.gt(candidate, second);
+     euint256 newSecondIfNotHigher = Nox.select(isMiddle, candidate, second);
+     second  = Nox.select(isHigher, highest, newSecondIfNotHigher);
      highest = Nox.select(isHigher, candidate, highest);
    }
    priceToPay = second;  // encrypted
    ```
-8. Winner gets the maker's cETH; pays second-highest price (encrypted) in cUSDC
+8. The maker opens `/rfq/[id]` (only they can see the **Reveal Winner**
+   panel), clicks **Decrypt N bids via Nox**, sees plaintext bid amounts,
+   and clicks **Pick as winner** on the highest one. Each bid row also
+   shows whether that bidder has authorized buyToken — picking an
+   unauthorized bidder is blocked because settlement would revert.
+9. `revealRFQWinner(id, winnerIdx)` runs settlement: maker → winner
+   transfers `sellAmount`, winner → maker transfers `priceToPay`
+   (= second-highest, encrypted). Status becomes **Filled**.
 
 ---
 
-## Step 8 — Audit Smart Contract (ChainGPT)
+## Step 8 — Mint Your Onchain NFT Receipt (15s)
 
-On the **Create** page, you'll see a **ChainGPT Auditor** card:
+Settled trades can be commemorated with an ERC-721 NFT keepsake minted
+straight to your wallet. Both maker and taker (or RFQ winner) qualify.
 
-1. Click **Audit Strategy B logic**
-2. ChainGPT sends `acceptIntent` source to the `smart_contract_auditor` model
-3. Returns markdown audit:
-   - Risk badge (Low / Medium / High)
-   - Numbered findings + recommendations
-   - Expandable raw markdown for full detail
+1. On the settled intent / RFQ detail page, scroll to the **On-chain NFT
+   Receipt** card.
+2. Click **MINT RECEIPT**. Sequence:
+   - ChainGPT generates a 512×512 image preview (~5–15s, the image renders
+     **before** the wallet popup so you see what you're about to mint).
+   - MetaMask prompts a single tx — `DiamReceipt.mint(intentId, mode,
+     settleTxHash, pair)`.
+   - Once confirmed, the panel shows **MINTED #N** with a link to the
+     token on Arbiscan and your tx hash.
+3. The button is idempotent — once minted, the panel surfaces "MINTED #N"
+   on every revisit, no duplicate mint possible. Backed by an event-log
+   read of `ReceiptMinted(uint256 indexed tokenId, uint256 indexed
+   intentId, address indexed minter, uint8 mode)`.
+4. Metadata is fully on-chain: `tokenURI` returns
+   `data:application/json;base64,...` with an inline SVG (gradient bg,
+   trade ID, pair, mode, settle tx). No IPFS, no off-chain image host —
+   the keepsake survives forever as long as Arbitrum does.
 
-This proves the AI integration isn't decorative — judges can verify it pulls live from `api.chaingpt.org`.
+> Random visitors viewing a settled trade see a **Read-only view** notice
+> instead of the mint button — receipts gate to actual participants
+> (maker via the intent struct, taker / winner via the `Settled` event log).
 
 ---
 
@@ -181,7 +224,8 @@ You executed a confidential OTC trade where:
 ✅ MEV bots cannot extract value from your order
 ✅ Settlement is atomic via ERC-7984 `confidentialTransferFrom`
 ✅ AI advisor checked your price vs market via ChainGPT
-✅ Smart contract audited live by ChainGPT in your browser
+✅ Settled trade was committed as an onchain ERC-721 NFT with fully
+   onchain SVG metadata — no IPFS, no off-chain image host
 
 All on Arbitrum Sepolia. All without trusted intermediaries. All without revealing a byte of size or price to public observers.
 
