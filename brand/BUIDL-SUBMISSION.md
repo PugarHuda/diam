@@ -91,12 +91,16 @@ Confidential OTC on iExec Nox. Trade amounts stay encrypted on-chain via TEE; a 
 
 | Field | Value |
 |---|---|
-| GitHub | (your repo URL) |
+| GitHub | https://github.com/PugarHuda/diam |
 | Live demo | https://private-otc.vercel.app |
-| Network | Arbitrum Sepolia |
-| PrivateOTC contract | `0xBD27DABa875aF238Fc7f2848B23904c99Ae5A563` |
-| cUSDC | `0xb690aaDa4e23620D0dcDE4c493BC1D90F791aB3F` |
-| cETH | `0xeB3AD65Bb0D877Bd57d7cEE9Bff800771Ba114d1` |
+| Demo video | https://youtu.be/_tMBT32r_kQ |
+| Twitter post | _(coming soon — to be added)_ |
+| Network | Arbitrum Sepolia (chain id 421614) |
+| PrivateOTC contract | `0x5b2C0c83e41bF9ef072d742096C49DFDB814CEB4` |
+| cUSDC | `0x57736B816F6cb53c6B2c742D3A162E89Db162ADE` |
+| cETH | `0xCdD84bA9415DFE3Dd5c0c05077B1FE194Bcf695d` |
+| DiamReceipt | `0xE011E57ff89a9b1450551A7cE402b75c5Bd27B85` |
+| NoxCompute proxy (iExec) | `0xd464B198f06756a1d00be223634b85E0a731c229` |
 
 ---
 

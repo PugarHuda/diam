@@ -89,9 +89,9 @@ operator would otherwise turn into a "DiamCToken: not operator" revert.
 
 Manual fallback (rarely needed):
 ```bash
-cast send 0xb690aaDa4e23620D0dcDE4c493BC1D90F791aB3F \
+cast send 0x57736B816F6cb53c6B2c742D3A162E89Db162ADE \
   "setOperator(address,uint48)" \
-  0xBD27DABa875aF238Fc7f2848B23904c99Ae5A563 \
+  0x5b2C0c83e41bF9ef072d742096C49DFDB814CEB4 \
   $((`date +%s` + 5184000))    # +60 days
 ```
 

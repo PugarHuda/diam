@@ -238,9 +238,9 @@ export const SLIDES: Slide[] = [
 
           <div className="grid grid-cols-1 gap-2 font-mono text-[11px] md:grid-cols-3">
             {[
-              { k: "PrivateOTC", v: "0xBD27…A563" },
-              { k: "cUSDC", v: "0xb690…B3F" },
-              { k: "cETH", v: "0xeB3A…14d1" },
+              { k: "PrivateOTC", v: "0x5b2C…CEB4" },
+              { k: "cUSDC", v: "0x5773…2ADE" },
+              { k: "cETH", v: "0xCdD8…695d" },
             ].map((c) => (
               <div
                 key={c.k}

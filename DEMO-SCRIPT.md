@@ -28,7 +28,7 @@
 - [ ] Wallet 2 (Taker): same — funded, balances minted, both operators authorized
 - [ ] Tabs to keep ready in another window:
   - `https://private-otc.vercel.app/intents` — paginated orderbook (stays warm in cache)
-  - `https://sepolia.arbiscan.io/address/0xBD27DABa875aF238Fc7f2848B23904c99Ae5A563` — PrivateOTC for "verified on-chain" cutaway
+  - `https://sepolia.arbiscan.io/address/0x5b2C0c83e41bF9ef072d742096C49DFDB814CEB4` — PrivateOTC for "verified on-chain" cutaway
   - `https://sepolia.arbiscan.io/address/0xE011E57ff89a9b1450551A7cE402b75c5Bd27B85` — DiamReceipt
 - [ ] **Pre-record a 25–30s demo clip** as fallback if live demo risks (network flake, MetaMask popup race) — drop into OBS as a scene cut
 

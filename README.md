@@ -13,6 +13,7 @@ Submission for the [iExec Vibe Coding Challenge](https://dorahacks.io/hackathon/
 | | |
 |---|---|
 | 🚀 **Live demo** | https://private-otc.vercel.app |
+| 🎥 **Demo video** | https://youtu.be/_tMBT32r_kQ |
 | 📦 **Source** | https://github.com/PugarHuda/diam |
 | 📡 **Network** | Arbitrum Sepolia (chain id `421614`) |
 | 🔑 **Stack** | Next.js 16 · Solidity 0.8.27 · iExec Nox · ChainGPT · MCP |
@@ -208,9 +209,9 @@ onchain SVG metadata that survives any image host going dark.
 
 | Contract | Address |
 |---|---|
-| `PrivateOTC` (the Diam orchestrator) | [`0xBD27DABa875aF238Fc7f2848B23904c99Ae5A563`](https://sepolia.arbiscan.io/address/0xBD27DABa875aF238Fc7f2848B23904c99Ae5A563) |
-| `DiamCToken` cUSDC | [`0xb690aaDa4e23620D0dcDE4c493BC1D90F791aB3F`](https://sepolia.arbiscan.io/address/0xb690aaDa4e23620D0dcDE4c493BC1D90F791aB3F) |
-| `DiamCToken` cETH | [`0xeB3AD65Bb0D877Bd57d7cEE9Bff800771Ba114d1`](https://sepolia.arbiscan.io/address/0xeB3AD65Bb0D877Bd57d7cEE9Bff800771Ba114d1) |
+| `PrivateOTC` (the Diam orchestrator) | [`0x5b2C0c83e41bF9ef072d742096C49DFDB814CEB4`](https://sepolia.arbiscan.io/address/0x5b2C0c83e41bF9ef072d742096C49DFDB814CEB4) |
+| `DiamCToken` cUSDC | [`0x57736B816F6cb53c6B2c742D3A162E89Db162ADE`](https://sepolia.arbiscan.io/address/0x57736B816F6cb53c6B2c742D3A162E89Db162ADE) |
+| `DiamCToken` cETH | [`0xCdD84bA9415DFE3Dd5c0c05077B1FE194Bcf695d`](https://sepolia.arbiscan.io/address/0xCdD84bA9415DFE3Dd5c0c05077B1FE194Bcf695d) |
 | `DiamReceipt` (ERC-721 keepsake) | [`0xE011E57ff89a9b1450551A7cE402b75c5Bd27B85`](https://sepolia.arbiscan.io/address/0xE011E57ff89a9b1450551A7cE402b75c5Bd27B85) |
 
 **NoxCompute proxy** (provided by iExec): [`0xd464B198f06756a1d00be223634b85E0a731c229`](https://sepolia.arbiscan.io/address/0xd464B198f06756a1d00be223634b85E0a731c229)
