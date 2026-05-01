@@ -12,6 +12,8 @@ import { NftReceipt } from "@/components/NftReceipt";
 import { SkeletonCard } from "@/components/Skeleton";
 import { useToast } from "@/components/Toast";
 import { OperatorAuth } from "@/components/OperatorAuth";
+import { OperatorWarning } from "@/components/OperatorWarning";
+import { useIsOperator, useSetOperator } from "@/lib/hooks/useSetOperator";
 import { privateOtcAbi } from "@/lib/abi/privateOtc";
 import { PRIVATE_OTC_ADDRESS, CUSDC_ADDRESS, CETH_ADDRESS } from "@/lib/wagmi";
 import { useAcceptIntent, useCancelIntent } from "@/lib/hooks/useOtcWrites";
@@ -128,6 +130,16 @@ export default function IntentDetailPage({
   const isOpen = intent.status === 0;
   const isExpired = Number(intent.deadline) <= Math.floor(Date.now() / 1000);
   const buyTok = TOKEN_NAMES[intent.buyToken.toLowerCase()];
+  const sellTok = TOKEN_NAMES[intent.sellToken.toLowerCase()];
+
+  // Both sides must have authorized OTC as operator before settlement
+  // can succeed. Read both holder×token states up-front so we can
+  // surface the failure mode (and disable submit) before the user
+  // pays gas for a doomed tx.
+  const takerBuyAuth = useSetOperator(intent.buyToken, address);
+  const makerSellAuth = useIsOperator(intent.sellToken, intent.maker);
+  const settleReady =
+    takerBuyAuth.isOperator && makerSellAuth.isOperator !== false;
 
   if (intent.mode === 1) {
     return (
@@ -324,6 +336,12 @@ export default function IntentDetailPage({
                 symbol={buyTok?.symbol ?? "buy token"}
                 reason={`Accept settlement pulls ${buyTok?.symbol ?? "your buy token"} from your wallet to the maker. Diam needs operator permission on this cToken first — one-time, lasts 60 days.`}
               />
+              <OperatorWarning
+                token={intent.sellToken}
+                holder={intent.maker}
+                symbol={sellTok?.symbol ?? "sell token"}
+                role="maker"
+              />
 
               <form onSubmit={onAccept} className="glass-card space-y-4 p-6">
                 <p className="text-label-caps flex items-center gap-2 text-[--color-primary]">
@@ -415,7 +433,15 @@ export default function IntentDetailPage({
                 disabled={
                   accept.step === "encrypting" ||
                   accept.step === "signing" ||
-                  accept.step === "confirming"
+                  accept.step === "confirming" ||
+                  !settleReady
+                }
+                title={
+                  !takerBuyAuth.isOperator
+                    ? `Authorize Diam for ${buyTok?.symbol ?? "buy token"} first`
+                    : makerSellAuth.isOperator === false
+                      ? `Maker hasn't authorized ${sellTok?.symbol ?? "sell token"} — settlement will revert`
+                      : undefined
                 }
                 className="diam-btn-primary w-full py-4 text-sm"
               >
@@ -423,7 +449,11 @@ export default function IntentDetailPage({
                 {accept.step === "signing" && "CONFIRM IN WALLET…"}
                 {accept.step === "confirming" && "SETTLING ON-CHAIN…"}
                 {(accept.step === "idle" || accept.step === "error") &&
-                  "ACCEPT + SETTLE"}
+                  (!takerBuyAuth.isOperator
+                    ? `AUTHORIZE ${buyTok?.symbol ?? "BUY"} FIRST`
+                    : makerSellAuth.isOperator === false
+                      ? "MAKER NOT AUTHORIZED"
+                      : "ACCEPT + SETTLE")}
                 {accept.step === "done" && "SETTLED ✓"}
               </button>
               </form>

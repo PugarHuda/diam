@@ -109,3 +109,35 @@ export function useSetOperator(
     txHash,
   };
 }
+
+/**
+ * Read-only variant: check whether `holder` has authorized PrivateOTC as
+ * operator on `token`. Used to surface counterparty status (maker's
+ * sell-side authorization on the accept page; bidders' buy-side
+ * authorization on the RFQ reveal panel) without offering a write path.
+ *
+ * Returns `undefined` while loading so callers can distinguish "unknown"
+ * from "definitely false".
+ */
+export function useIsOperator(
+  token: `0x${string}` | undefined,
+  holder: `0x${string}` | undefined,
+) {
+  const query = useReadContract({
+    address: token,
+    abi: cTokenAbi,
+    functionName: "isOperator",
+    args: holder ? [holder, PRIVATE_OTC_ADDRESS] : undefined,
+    query: {
+      enabled: !!token && !!holder,
+      // Slower than useSetOperator (15s) — counterparty changes happen
+      // out-of-band, polling tighter just wastes RPC.
+      refetchInterval: 30_000,
+    },
+  });
+  return {
+    isOperator: query.data as boolean | undefined,
+    isLoading: query.isLoading,
+    refetch: query.refetch,
+  };
+}

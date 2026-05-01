@@ -10,8 +10,10 @@ import { PageHeader, SectionHeader } from "@/components/PageHeader";
 import { NftReceipt } from "@/components/NftReceipt";
 import { SkeletonCard } from "@/components/Skeleton";
 import { OperatorAuth } from "@/components/OperatorAuth";
+import { useSetOperator } from "@/lib/hooks/useSetOperator";
 import { privateOtcAbi } from "@/lib/abi/privateOtc";
 import { PRIVATE_OTC_ADDRESS, CUSDC_ADDRESS, CETH_ADDRESS } from "@/lib/wagmi";
+import { parseAbi } from "viem";
 import {
   useSubmitBid,
   useFinalizeRfq,
@@ -44,6 +46,10 @@ const RFQ_BIDS_ABI = [
     ],
   },
 ] as const;
+
+const IS_OPERATOR_ABI = parseAbi([
+  "function isOperator(address holder, address spender) view returns (bool)",
+]);
 
 export default function RfqDetailPage({
   params,
@@ -165,6 +171,43 @@ export default function RfqDetailPage({
     .map((r) => r.result as readonly [`0x${string}`, `0x${string}`, boolean])
     .map((v) => ({ taker: v[0], handle: v[1], active: v[2] }));
 
+  // Per-bidder: has each bidder authorized PrivateOTC as operator on the
+  // buyToken? If not, picking them in revealRFQWinner reverts at
+  // _settleAtomic with "DiamCToken: not operator". Maker can't fix this
+  // for the bidder — they have to choose an authorized one.
+  const buyTokenForRead = ((intentQuery.data as
+    | readonly [
+        `0x${string}`,
+        `0x${string}`,
+        `0x${string}`,
+        `0x${string}`,
+        `0x${string}`,
+        bigint,
+        number,
+        number,
+        `0x${string}`,
+        `0x${string}`,
+      ]
+    | undefined)?.[2]) as `0x${string}` | undefined;
+  const bidderAuthQuery = useReadContracts({
+    contracts: bids.map((b) => ({
+      address: buyTokenForRead,
+      abi: IS_OPERATOR_ABI,
+      functionName: "isOperator" as const,
+      args: [b.taker, PRIVATE_OTC_ADDRESS] as const,
+    })),
+    allowFailure: true,
+    query: {
+      enabled: !!buyTokenForRead && bids.length > 0,
+      refetchInterval: 30_000,
+    },
+  });
+  const bidderAuthorized: (boolean | undefined)[] = bids.map((_, i) => {
+    const r = bidderAuthQuery.data?.[i];
+    if (!r || r.status !== "success") return undefined;
+    return r.result as boolean;
+  });
+
   if (intentQuery.isLoading) {
     return (
       <AppShell>
@@ -223,9 +266,16 @@ export default function RfqDetailPage({
   const isExpired = Number(rfq.deadline) <= now;
   const isMaker = address && address.toLowerCase() === rfq.maker.toLowerCase();
   const buyTok = TOKEN_NAMES[rfq.buyToken.toLowerCase()];
-  const sellSym =
-    TOKEN_NAMES[rfq.sellToken.toLowerCase()]?.symbol ??
-    shortAddress(rfq.sellToken);
+  const sellTok = TOKEN_NAMES[rfq.sellToken.toLowerCase()];
+  const sellSym = sellTok?.symbol ?? shortAddress(rfq.sellToken);
+
+  // Maker reveal flow needs maker's sellToken authorization. If missing,
+  // surface an OperatorAuth banner so they can fix it before picking
+  // a winner — otherwise revealRFQWinner reverts.
+  const makerSellAuth = useSetOperator(
+    rfq.sellToken,
+    isMaker ? address : undefined,
+  );
 
   const remaining = Number(rfq.deadline) - now;
 
@@ -483,7 +533,14 @@ export default function RfqDetailPage({
               : -1;
 
             return (
-              <div className="glass-card border-l-2 border-l-amber-400 p-6">
+              <>
+                <OperatorAuth
+                  token={rfq.sellToken}
+                  account={address}
+                  symbol={sellSym}
+                  reason={`Reveal settlement debits ${sellSym} from your wallet to the winning bidder. Diam needs operator permission first.`}
+                />
+                <div className="glass-card border-l-2 border-l-amber-400 p-6">
                 <p className="text-label-caps mb-2 flex items-center gap-2 text-amber-400">
                   <span className="h-1.5 w-1.5 animate-pulse bg-amber-400" />
                   Step 2 of 2 · Reveal Winner
@@ -526,13 +583,18 @@ export default function RfqDetailPage({
                       {bids.map((bid, i) => {
                         const amount = decrypted[i];
                         const isHighest = i === highestIdx;
+                        const bidderOk = bidderAuthorized[i];
+                        const settleReady =
+                          bidderOk === true && makerSellAuth.isOperator;
                         return (
                           <li
                             key={i}
                             className={`flex items-center justify-between border p-3 transition ${
-                              isHighest
-                                ? "border-amber-400 bg-amber-400/5"
-                                : "border-zinc-800 bg-zinc-900/40"
+                              bidderOk === false
+                                ? "border-[--color-danger]/60 bg-[--color-danger]/5"
+                                : isHighest
+                                  ? "border-amber-400 bg-amber-400/5"
+                                  : "border-zinc-800 bg-zinc-900/40"
                             }`}
                           >
                             <div className="flex items-center gap-3">
@@ -562,12 +624,18 @@ export default function RfqDetailPage({
                                     {bid.handle.slice(0, 14)}…[encrypted]
                                   </span>
                                 )}
+                                {bidderOk === false && (
+                                  <span className="font-mono text-[10px] text-[--color-danger]">
+                                    ⚠ not authorized — picking reverts
+                                  </span>
+                                )}
                               </div>
                             </div>
                             <button
                               onClick={() => reveal.submit(rfqId, BigInt(i))}
                               disabled={
                                 !allDecrypted ||
+                                !settleReady ||
                                 reveal.step === "signing" ||
                                 reveal.step === "confirming"
                               }
@@ -577,9 +645,13 @@ export default function RfqDetailPage({
                                   : "border-amber-400/40 bg-amber-400/10 text-amber-400 hover:bg-amber-400/20"
                               }`}
                               title={
-                                allDecrypted
-                                  ? "Settle to this bidder"
-                                  : "Decrypt bids first"
+                                !allDecrypted
+                                  ? "Decrypt bids first"
+                                  : !makerSellAuth.isOperator
+                                    ? `Authorize ${sellSym} above first`
+                                    : bidderOk === false
+                                      ? "Bidder hasn't authorized — would revert"
+                                      : "Settle to this bidder"
                               }
                             >
                               Pick as winner
@@ -607,7 +679,8 @@ export default function RfqDetailPage({
                     )}
                   </p>
                 )}
-              </div>
+                </div>
+              </>
             );
           })()}
 

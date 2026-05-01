@@ -1,11 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { useAccount } from "wagmi";
 import { parseUnits } from "viem";
 import { AppShell } from "@/components/AppShell";
 import { PageHeader, SectionHeader } from "@/components/PageHeader";
 import { ChainGPTAdvisor } from "@/components/ChainGPTAdvisor";
+import { OperatorAuth } from "@/components/OperatorAuth";
 import { useCreateIntent } from "@/lib/hooks/useCreateIntent";
+import { useSetOperator } from "@/lib/hooks/useSetOperator";
 import { safeUnitPrice } from "@/lib/precision";
 import { CUSDC_ADDRESS, CETH_ADDRESS } from "@/lib/wagmi";
 
@@ -22,6 +25,7 @@ const DEADLINE_PRESETS = [
 ];
 
 export default function DirectOtcPage() {
+  const { address } = useAccount();
   const { submit, step, error, intentId, txHash } = useCreateIntent();
 
   const [sellSymbol, setSellSymbol] = useState("cETH");
@@ -33,6 +37,11 @@ export default function DirectOtcPage() {
 
   const sellTok = TOKENS.find((t) => t.symbol === sellSymbol)!;
   const buyTok = TOKENS.find((t) => t.symbol === buySymbol)!;
+
+  // Maker must authorize OTC as operator on sellToken — otherwise any
+  // taker who later tries to accept this intent gets a "not operator"
+  // revert at settlement time. Block submit until authorized.
+  const sellTokenAuth = useSetOperator(sellTok.address, address);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -88,6 +97,14 @@ export default function DirectOtcPage() {
 
             <SectionHeader icon="add_circle" title="Create Direct Intent" />
 
+            <div className="mb-6">
+              <OperatorAuth
+                token={sellTok.address}
+                account={address}
+                symbol={sellTok.symbol}
+                reason={`Settlement debits ${sellTok.symbol} from your wallet to the taker. Diam needs operator permission first — without it, anyone trying to accept this intent will get a "not operator" revert.`}
+              />
+            </div>
 
             <form onSubmit={onSubmit} className="space-y-6">
               <FieldRow>
@@ -210,7 +227,12 @@ export default function DirectOtcPage() {
 
               <button
                 type="submit"
-                disabled={busy}
+                disabled={busy || !sellTokenAuth.isOperator}
+                title={
+                  !sellTokenAuth.isOperator && address
+                    ? `Authorize Diam for ${sellTok.symbol} above first`
+                    : undefined
+                }
                 className="diam-btn-primary flex w-full items-center justify-center gap-2 py-4 text-sm"
               >
                 <span
@@ -228,7 +250,9 @@ export default function DirectOtcPage() {
                 {step === "signing" && "CONFIRM IN WALLET…"}
                 {step === "confirming" && "CONFIRMING ON-CHAIN…"}
                 {(step === "idle" || step === "error") &&
-                  "BROADCAST ENCRYPTION"}
+                  (!sellTokenAuth.isOperator && address
+                    ? `AUTHORIZE ${sellTok.symbol} FIRST`
+                    : "BROADCAST ENCRYPTION")}
                 {step === "done" && "BROADCAST COMPLETE"}
               </button>
             </form>

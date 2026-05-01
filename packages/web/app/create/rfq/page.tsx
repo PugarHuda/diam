@@ -3,12 +3,15 @@
 import Link from "next/link";
 import { useState } from "react";
 import type { Route } from "next";
+import { useAccount } from "wagmi";
 import { parseUnits } from "viem";
 import { AppShell } from "@/components/AppShell";
 import { PageHeader, SectionHeader } from "@/components/PageHeader";
 import { MarketSignal } from "@/components/MarketSignal";
 import { HelpHint } from "@/components/Tooltip";
+import { OperatorAuth } from "@/components/OperatorAuth";
 import { useCreateRfq } from "@/lib/hooks/useOtcWrites";
+import { useSetOperator } from "@/lib/hooks/useSetOperator";
 import { CUSDC_ADDRESS, CETH_ADDRESS } from "@/lib/wagmi";
 
 const TOKENS = [
@@ -24,6 +27,7 @@ const WINDOW_PRESETS = [
 ];
 
 export default function RfqCreatePage() {
+  const { address } = useAccount();
   const { submit, step, error, intentId, txHash } = useCreateRfq();
 
   const [sellSymbol, setSellSymbol] = useState("cETH");
@@ -33,6 +37,10 @@ export default function RfqCreatePage() {
 
   const sellTok = TOKENS.find((t) => t.symbol === sellSymbol)!;
   const buyTok = TOKENS.find((t) => t.symbol === buySymbol)!;
+
+  // Maker authorizes sellToken — winner of the auction can't settle if this
+  // is missing (revealRFQWinner reverts at _settleAtomic).
+  const sellTokenAuth = useSetOperator(sellTok.address, address);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -78,6 +86,14 @@ export default function RfqCreatePage() {
           <div className="glass-card p-6">
             <SectionHeader icon="gavel" title="Open Sealed-Bid Auction" />
 
+            <div className="mb-6">
+              <OperatorAuth
+                token={sellTok.address}
+                account={address}
+                symbol={sellTok.symbol}
+                reason={`When you reveal the winning bidder, settlement debits ${sellTok.symbol} from your wallet to them. Diam needs operator permission first — without it, reveal will revert.`}
+              />
+            </div>
 
             <form onSubmit={onSubmit} className="space-y-6">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -207,7 +223,12 @@ export default function RfqCreatePage() {
 
               <button
                 type="submit"
-                disabled={busy}
+                disabled={busy || !sellTokenAuth.isOperator}
+                title={
+                  !sellTokenAuth.isOperator && address
+                    ? `Authorize Diam for ${sellTok.symbol} above first`
+                    : undefined
+                }
                 className="diam-btn-primary flex w-full items-center justify-center gap-2 py-4 text-sm"
               >
                 <span
@@ -224,7 +245,10 @@ export default function RfqCreatePage() {
                 {step === "encrypting" && "ENCRYPTING VIA NOX…"}
                 {step === "signing" && "CONFIRM IN WALLET…"}
                 {step === "confirming" && "OPENING ON-CHAIN…"}
-                {(step === "idle" || step === "error") && "OPEN AUCTION"}
+                {(step === "idle" || step === "error") &&
+                  (!sellTokenAuth.isOperator && address
+                    ? `AUTHORIZE ${sellTok.symbol} FIRST`
+                    : "OPEN AUCTION")}
                 {step === "done" && "BROADCAST COMPLETE"}
               </button>
             </form>
