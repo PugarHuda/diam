@@ -10,11 +10,21 @@ On-chain OTC desk dengan amount terenkripsi, built on iExec Nox confidential com
 private-otc/
 ├── packages/
 │   ├── contracts/      # Solidity 0.8.27 + Foundry
+│   │                   # PrivateOTC + DiamCToken (cUSDC, cETH) + DiamReceipt (ERC-721)
 │   ├── web/            # Next.js 16 frontend
-│   ├── agents/         # Compound Engineering autonomous agents
+│   ├── agents/         # Compound Engineering autonomous agents + seed scripts
 │   └── mcp-server/     # MCP server exposing OTC as AI tool
 └── .claude-plugin/     # Claude Code plugin companion (/otc-* commands)
 ```
+
+## Deployed contracts (Arbitrum Sepolia)
+
+| Contract | Address | env var |
+|---|---|---|
+| PrivateOTC | `0xBD27DABa875aF238Fc7f2848B23904c99Ae5A563` | `NEXT_PUBLIC_PRIVATE_OTC_ADDRESS` |
+| cUSDC | `0xb690aaDa4e23620D0dcDE4c493BC1D90F791aB3F` | `NEXT_PUBLIC_CUSDC_ADDRESS` |
+| cETH | `0xeB3AD65Bb0D877Bd57d7cEE9Bff800771Ba114d1` | `NEXT_PUBLIC_CETH_ADDRESS` |
+| DiamReceipt | `0xE011E57ff89a9b1450551A7cE402b75c5Bd27B85` | `NEXT_PUBLIC_DIAM_RECEIPT_ADDRESS` |
 
 ## How to run
 
@@ -32,10 +42,11 @@ pnpm mcp:dev                        # run MCP server
 
 | Layer | Tech |
 |---|---|
-| Contracts | Solidity 0.8.27 + Foundry + `@iexec-nox/nox-protocol-contracts` |
+| Contracts | Solidity 0.8.27 + Foundry + `@iexec-nox/nox-protocol-contracts` + OpenZeppelin (ERC-721) |
 | Frontend | Next.js 16 (App Router) + wagmi v2 + RainbowKit + shadcn/ui |
 | Encryption | `@iexec-nox/handle` (Viem v2) |
-| AI | ChainGPT API |
+| AI | ChainGPT API (advisor / signal / receipt image only — auditor was removed) |
+| Receipt NFT | ERC-721 with fully onchain Base64 SVG metadata (no IPFS) |
 | Agents | Vercel Cron + Functions, Node 22 |
 | MCP | Model Context Protocol SDK |
 | Network | Arbitrum Sepolia |
@@ -70,3 +81,21 @@ pnpm mcp:dev                        # run MCP server
 - Full ERC-7540 (DQ trap if partial)
 - Full lending protocol (scope creep)
 - Mainnet deploy (Sepolia only)
+
+## Operator authorization invariant
+
+Settlement (`acceptIntent`, `revealRFQWinner`) calls
+`confidentialTransferFrom` on **both** sides. Both holders must have
+called `setOperator(PrivateOTC, until)` on the relevant cToken **before**
+settle, otherwise `_settleAtomic` reverts with "DiamCToken: not operator".
+
+UI surfaces this end-to-end:
+- `OperatorAuth` (self side): banner with one-click authorize, mounted on
+  `/faucet`, `/create/direct`, `/create/rfq`, `/intents/[id]`, `/rfq/[id]`.
+- `OperatorWarning` (counterparty side): red blocker on `/intents/[id]`
+  if the maker hasn't authorized sellToken; per-bidder badges on
+  `/rfq/[id]` reveal panel. Disables submit/pick instead of letting the
+  user pay gas for a doomed tx.
+- Seed wallets (alice/bob/carol/dave/eve/frank) authorized by
+  `pnpm --filter agents tsx src/seed/seed-authorize-operators.ts`
+  — idempotent, safe to re-run.

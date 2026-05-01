@@ -17,25 +17,35 @@ app/
 ├── layout.tsx              # Root layout, fonts, providers
 ├── providers.tsx           # WagmiProvider + RainbowKitProvider + ReactQuery
 ├── globals.css             # Tailwind + theme tokens (CSS variables)
-├── intents/                # Browse + detail
-├── create/                 # Create OTC intent or RFQ
-├── rfq/                    # RFQ detail + bid form
+├── intents/                # Paginated orderbook + detail (Direct accept page)
+├── create/                 # Create OTC intent or RFQ (with operator gating)
+├── rfq/                    # RFQ detail (bid + reveal panel)
 ├── portfolio/              # User's intents/bids + decrypt
-└── audit/                  # Public audit view per tx
+├── faucet/                 # Mint cTokens + per-token operator authorize
+└── api/chaingpt/           # /signal, /fair-price, /nft-receipt (auditor removed)
 
 components/
-├── Header.tsx
-├── EncryptedAmountInput.tsx
-├── DecryptableBalance.tsx
-├── RFQBidList.tsx
-├── VickreyRevealAnimation.tsx
-└── ChainGPTAdvisor.tsx
+├── AppShell.tsx, Header.tsx, PageHeader.tsx
+├── OperatorAuth.tsx        # Self-side authorize banner (one-click setOperator)
+├── OperatorWarning.tsx     # Counterparty-side red blocker (maker/winner missing auth)
+├── NftReceipt.tsx          # Single-click ChainGPT image + onchain ERC-721 mint
+├── ChainGPTAdvisor.tsx     # Fair-price advisory in /create/direct
+├── MarketSignal.tsx        # ChainGPT signal in /create/rfq
+└── ...                     # Skeleton, Toast, Tooltip, EmptyState, etc.
 
 lib/
-├── wagmi.ts                # Wagmi config + contract addresses
+├── wagmi.ts                # Contract addresses (PrivateOTC, cUSDC, cETH, DiamReceipt)
 ├── nox-client.ts           # Encryption SDK wrapper
-├── chaingpt.ts             # ChainGPT API client
-└── utils.ts                # cn(), shortAddress(), etc.
+├── chaingpt.ts             # ChainGPT API client (signal / fair-price / nft-receipt)
+├── abi/                    # Typed contract ABIs (privateOtc, etc.)
+└── hooks/
+    ├── useIntents.ts           # Browse rows
+    ├── useOtcWrites.ts         # createIntent/Accept/Bid/Cancel/Finalize/Reveal
+    ├── useSetOperator.ts       # Self-side setOperator + read isOperator
+    ├── useIsOperator           # (named export) read-only counterparty check
+    ├── useSettledTaker.ts      # Resolve settlement taker from Settled event log
+    ├── useReceiptMint.ts       # DiamReceipt.mint write
+    └── useExistingReceipt.ts   # Idempotency: read past ReceiptMinted events
 ```
 
 ## Conventions
@@ -53,9 +63,10 @@ Need `NEXT_PUBLIC_*` for client, others server-only:
 
 ```
 NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID    # Reown/WC project id
-NEXT_PUBLIC_PRIVATE_OTC_ADDRESS         # Deployed contract address
+NEXT_PUBLIC_PRIVATE_OTC_ADDRESS         # PrivateOTC orchestrator
 NEXT_PUBLIC_CUSDC_ADDRESS               # cUSDC token address
 NEXT_PUBLIC_CETH_ADDRESS                # cETH token address
+NEXT_PUBLIC_DIAM_RECEIPT_ADDRESS        # DiamReceipt ERC-721
 NEXT_PUBLIC_NOX_NETWORK                 # arbitrum-sepolia
 NEXT_PUBLIC_NOX_HANDLE_GATEWAY_URL      # Nox gateway endpoint
 
@@ -88,3 +99,28 @@ pnpm lint                   # next lint
 - DON'T render user balances without `<DecryptableBalance>` wrapper
 - DON'T use `any` — strict mode is enabled
 - DON'T fetch encrypted values in Server Components — they need wallet sig
+- DON'T call hooks after early returns. `useReadContract`, `useSetOperator`,
+  `useSettledTaker` etc. must sit above any `if (loading) return` branch —
+  hooks tolerate undefined inputs via internal `enabled` guards. Past
+  bug: react error #310 from /intents/[id] and /rfq/[id]; fix was moving
+  hooks above the intentQuery loading branch.
+
+## Mint flow contract (NftReceipt)
+
+Single-click "MINT RECEIPT" does two things in sequence:
+1. POST `/api/chaingpt/nft-receipt` → preview image (off-chain artifact).
+   If this fails, on-chain mint still proceeds (info banner shown).
+2. `useReceiptMint().submit(...)` → `DiamReceipt.mint(intentId, mode,
+   settleTxHash, pair)` → ERC-721 to caller's wallet.
+
+Idempotency: `useExistingReceipt(intentId, address)` reads
+`ReceiptMinted` events filtered by the (intentId, minter) topic pair.
+If a receipt already exists, the button is hidden and the panel shows
+a "MINTED #N" link to Arbiscan instead. After a fresh mint commits,
+the hook's `refresh()` is called to reflect the new tokenId without
+a page reload.
+
+Participant gating: receipt mint UI only renders if connected wallet is
+maker, OR Settled event taker (from `useSettledTaker`), OR the active
+session just settled (`accept.step === "done"` / `reveal.step === "done"`).
+Random visitors see "Read-only view" notice.

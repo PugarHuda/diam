@@ -63,9 +63,14 @@ flowchart TB
         Web --> ContractsAPI
     end
 
+    subgraph "🎟️ Receipt Layer"
+        Receipt[DiamReceipt.sol<br/><i>ERC-721 with onchain SVG</i>]
+        Web -->|mint after settle| Receipt
+    end
+
     subgraph "🌐 External Services"
         Nox[iExec Nox<br/><i>NoxCompute TEE precompile</i>]
-        CGT[ChainGPT API<br/><i>auditor · fair price · NFT receipts</i>]
+        CGT[ChainGPT API<br/><i>fair price · NFT image · signal</i>]
         ContractsAPI <-->|encrypted ops<br/>Nox.gt · Nox.select<br/>Nox.transfer| Nox
         Web -.-> CGT
         SC -.-> CGT
@@ -87,11 +92,12 @@ flowchart TB
 
 | Layer | Tech |
 |---|---|
-| Smart Contracts | Solidity 0.8.27 · Foundry · [`@iexec-nox/nox-protocol-contracts@0.2.2`](https://www.npmjs.com/package/@iexec-nox/nox-protocol-contracts) |
+| Smart Contracts | Solidity 0.8.27 · Foundry · [`@iexec-nox/nox-protocol-contracts@0.2.2`](https://www.npmjs.com/package/@iexec-nox/nox-protocol-contracts) · OpenZeppelin ERC-721 |
 | Confidential primitives | iExec Nox (TEE-based) · NoxCompute proxy on Arbitrum Sepolia |
 | Encryption | [`@iexec-nox/handle@0.1.0-beta.10`](https://www.npmjs.com/package/@iexec-nox/handle) — Viem v2 client |
 | Frontend | Next.js 16 (App Router · Turbopack) · wagmi v2 · RainbowKit · Tailwind v4 |
-| AI | ChainGPT API — smart contract auditor, fair-price advisor, settlement reports |
+| AI | ChainGPT API — fair-price advisor, market signal, NFT receipt image |
+| NFT receipts | DiamReceipt ERC-721 — fully onchain Base64-encoded SVG metadata |
 | Autonomous agents | Node 22 · viem `watchContractEvent` · Vercel Cron + Functions |
 | MCP server | `@modelcontextprotocol/sdk` · stdio transport |
 | Hosting | Vercel (production) |
@@ -170,14 +176,30 @@ pnpm mcp:dev                 # stdio transport, ready for Claude Code / Cursor
 
 1. Visit [https://private-otc.vercel.app](https://private-otc.vercel.app)
 2. Connect a wallet on **Arbitrum Sepolia**
-3. Go to **Faucet** → mint 10,000 cUSDC and 10 cETH (encrypted via Nox)
+3. Go to **Faucet** → mint 10,000 cUSDC and 10 cETH (encrypted via Nox).
+   Each token row shows an **Authorize Diam** banner — click it once per
+   token to approve the OTC contract as operator (60-day expiry).
 4. Go to **Portfolio** → click **Decrypt** to confirm the JS SDK can read your hidden balance
-5. Approve the Diam contract as an operator on each cToken (one-time, in your wallet)
-6. **Create Intent** → Direct OTC: sell 1 cETH for at least 3,500 cUSDC
-7. With another wallet, browse **Intents** → **Accept** with a bid
-8. Both parties decrypt their new balances on **Portfolio**
+5. **Create Intent** → Direct OTC: sell 1 cETH for at least 3,500 cUSDC.
+   The create form blocks submit until your sell-side `setOperator` is in
+   place, so dead-on-arrival intents can't ship.
+6. Browse **/intents** — paginated orderbook (10 per page) with status,
+   mode, pair, and "mine only" filters. URL params (`?status=open&p=2`)
+   are shareable. Seed data covers Open / Filled / Cancelled / Expired
+   / PendingReveal so every state path is demo-ready.
+7. With another wallet, **Accept** the intent (Direct) or **Submit Bid**
+   (RFQ). The accept page shows a red banner if either party hasn't
+   authorized — saves gas on a doomed tx.
+8. Both parties decrypt their new balances on **Portfolio**.
+9. **Mint your NFT receipt** — on the settled intent page, click
+   **MINT RECEIPT**. One click triggers two things: a ChainGPT-generated
+   image previews above, and a `DiamReceipt.mint(...)` ERC-721 commits
+   onchain to your wallet. The button hides afterwards (one-mint-per-
+   participant per intent), and you get an Arbiscan link to the NFT.
 
-The transaction shows up on Etherscan — but the amount is a 32-byte handle, not a number.
+The transaction shows up on Arbiscan — but the amount is a 32-byte
+handle, not a number. Settled trades produce a real ERC-721 with fully
+onchain SVG metadata that survives any image host going dark.
 
 ---
 
@@ -185,15 +207,12 @@ The transaction shows up on Etherscan — but the amount is a 32-byte handle, no
 
 | Contract | Address |
 |---|---|
-| `PrivateOTC` (the Diam orchestrator) | [`0x5b2C0c83e41bF9ef072d742096C49DFDB814CEB4`](https://sepolia.arbiscan.io/address/0x5b2C0c83e41bF9ef072d742096C49DFDB814CEB4) |
-| `DiamCToken` cUSDC | [`0x57736B816F6cb53c6B2c742D3A162E89Db162ADE`](https://sepolia.arbiscan.io/address/0x57736B816F6cb53c6B2c742D3A162E89Db162ADE) |
-| `DiamCToken` cETH | [`0xCdD84bA9415DFE3Dd5c0c05077B1FE194Bcf695d`](https://sepolia.arbiscan.io/address/0xCdD84bA9415DFE3Dd5c0c05077B1FE194Bcf695d) |
+| `PrivateOTC` (the Diam orchestrator) | [`0xBD27DABa875aF238Fc7f2848B23904c99Ae5A563`](https://sepolia.arbiscan.io/address/0xBD27DABa875aF238Fc7f2848B23904c99Ae5A563) |
+| `DiamCToken` cUSDC | [`0xb690aaDa4e23620D0dcDE4c493BC1D90F791aB3F`](https://sepolia.arbiscan.io/address/0xb690aaDa4e23620D0dcDE4c493BC1D90F791aB3F) |
+| `DiamCToken` cETH | [`0xeB3AD65Bb0D877Bd57d7cEE9Bff800771Ba114d1`](https://sepolia.arbiscan.io/address/0xeB3AD65Bb0D877Bd57d7cEE9Bff800771Ba114d1) |
+| `DiamReceipt` (ERC-721 keepsake) | [`0xE011E57ff89a9b1450551A7cE402b75c5Bd27B85`](https://sepolia.arbiscan.io/address/0xE011E57ff89a9b1450551A7cE402b75c5Bd27B85) |
 
 **NoxCompute proxy** (provided by iExec): [`0xd464B198f06756a1d00be223634b85E0a731c229`](https://sepolia.arbiscan.io/address/0xd464B198f06756a1d00be223634b85E0a731c229)
-
-> **Naming note:** Source code references `DiamCToken`. Contracts were originally
-> deployed under the legacy name `MockCToken`; bytecode and ABI are identical
-> across the rename — deployed addresses above remain canonical for demo data.
 
 > The on-chain contract name remains `PrivateOTC` (immutable). "Diam" is the user-facing brand and product name.
 
@@ -224,6 +243,29 @@ The branch (real vs zero) lives entirely inside encrypted handles. The on-chain 
 
 ---
 
+## DiamReceipt — Onchain ERC-721 Keepsake
+
+Every settled trade can be commemorated with an NFT minted directly to the
+participant's wallet. Both image and metadata are stored fully onchain:
+
+- `DiamReceipt.mint(intentId, mode, settleTxHash, pair)` — open mint at the
+  contract level, idempotency enforced at the UI via `useExistingReceipt`
+  reading past `ReceiptMinted` events.
+- `tokenURI(tokenId)` returns a `data:application/json;base64,...` URI
+  containing inline SVG art + structured attributes. No IPFS, no off-chain
+  image host — the keepsake survives forever as long as Arbitrum does.
+- Frontend collapses image generation + onchain mint into a single click;
+  ChainGPT failures don't block the onchain commit.
+- Receipt mint is gated to actual participants: maker (from intent struct),
+  Direct taker (from `Settled` event log via `useSettledTaker`), or RFQ
+  winner bidder (same event log). Random visitors see a read-only notice.
+
+| Token | What's onchain |
+|---|---|
+| Diam Receipt #N | name, description, SVG image, attributes (Mode, Pair, Intent ID, Settled At) |
+
+---
+
 ## What's Real vs. Mock
 
 Per hackathon brief: *"using mock data leads to disqualification"*. Honest audit:
@@ -237,6 +279,7 @@ Per hackathon brief: *"using mock data leads to disqualification"*. Honest audit
 
 🛠️ **Self-deployed (real, but written by us)**
 - `DiamCToken.sol` — Diam's full ERC-7984 implementation (~180 LOC) using real `Nox.transfer` / `Nox.mint` primitives. We deployed it because the [`cdefi.iex.ec`](https://cdefi.iex.ec) faucet does not publicly expose token addresses. Implements **all 8 ERC-7984 transfer functions** (4 plain + 4 transfer-and-call), `IERC7984Receiver` callback verification, and the operator pattern with `uint48` timestamp expiry. **Full spec compliance** per EIP-7984 — no partial.
+- `DiamReceipt.sol` — ERC-721 trade receipt with fully onchain Base64-encoded SVG `tokenURI`. ~200 LOC, no IPFS dependency.
 
 There is **no fake data** anywhere. Every encrypted handle is a real reference to TEE-encrypted state.
 

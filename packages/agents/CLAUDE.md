@@ -13,6 +13,30 @@ Autonomous agents yang "compound" trader's edge dengan jalan terus-menerus, menj
 | `strategy-coach` | daily cron | ChainGPT-powered trade analysis |
 | `settlement-monitor` | viem watchContractEvent on `Settled` | Post-trade audit + webhook |
 
+## Seed scripts (`src/seed/`)
+
+Demo data generators using deterministic test wallets derived from labels via `keccak256("diam-demo-${label}")` — wallets stay consistent across runs.
+
+| Script | Purpose |
+|---|---|
+| `seed-multi.ts` | Bootstrap: fund 3 makers from admin, mint cTokens, authorize, create 1 intent each |
+| `seed-bids.ts` / `seed-bids-7.ts` | Submit encrypted bids on existing RFQs |
+| `seed-extra-bids.ts` | Top up bid count on a target RFQ |
+| `seed-fresh-rfq.ts` / `seed-rfq-7.ts` | Spin up fresh RFQs |
+| `seed-history.ts` | Bulk historical Settled trades for audit-trail demo |
+| `seed-30d-demo.ts` | 30-day demo timeline (multi-intent, multi-status) |
+| `seed-settled-examples.ts` | Mark a few intents as Settled |
+| `seed-mixed-statuses.ts` | **Latest:** populate /intents with one of every state — Open / Filled / Cancelled / Soon-Expired (Direct) + Open / PendingReveal (RFQ) |
+| `seed-authorize-operators.ts` | **One-shot fix:** every seed wallet calls `setOperator(PrivateOTC, +60d)` on both cTokens. Idempotent. Run after deploys to make seed-created intents settle-able |
+| `check-balances.ts` | Read-only inventory check on every seed wallet |
+| `diagnose-rfq.ts` | Inspect bid count + status of a target RFQ |
+
+Run any script:
+
+```bash
+PRIVATE_KEY=0x... pnpm --filter agents tsx src/seed/<script>.ts
+```
+
 ## Stack
 
 - **Runtime:** Node 22 ESM

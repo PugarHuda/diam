@@ -1,13 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useAccount } from "wagmi";
 import { CopyButton } from "./CopyButton";
 import { CornerBrackets } from "./CornerBrackets";
 import { useReceiptMint } from "@/lib/hooks/useReceiptMint";
+import { useExistingReceipt } from "@/lib/hooks/useExistingReceipt";
+import { DIAM_RECEIPT_ADDRESS } from "@/lib/wagmi";
 
 type State =
   | { kind: "idle" }
-  | { kind: "loading" }
+  | { kind: "generating-image" }
   | {
       kind: "ok";
       imageDataUrl: string;
@@ -30,38 +33,60 @@ export interface NftReceiptProps {
 }
 
 export function NftReceipt(props: NftReceiptProps) {
+  const { address } = useAccount();
   const [state, setState] = useState<State>({ kind: "idle" });
   const mint = useReceiptMint();
+  const existing = useExistingReceipt(BigInt(props.intentId), address);
 
-  async function onMintOnchain() {
-    await mint.submit({
-      intentId: BigInt(props.intentId),
-      mode: props.mode,
-      settleTxHash: (props.txHash as `0x${string}` | undefined) ?? null,
-      pair: props.pair,
-    });
-  }
+  // After a fresh mint commits, refetch the existing-receipt query so
+  // the UI reflects the new tokenId without a page reload.
+  useEffect(() => {
+    if (mint.step === "done" && mint.tokenId !== null) {
+      existing.refresh();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mint.step, mint.tokenId]);
 
-  async function generate() {
-    setState({ kind: "loading" });
+  // Single-click flow: generate the ChainGPT image, then immediately
+  // mint the on-chain ERC-721. Image is the off-chain visual; the NFT
+  // is the on-chain audit-trail keepsake. We don't gate the mint on
+  // image success — even if ChainGPT errors, the on-chain mint still
+  // commits the receipt with the canonical SVG metadata.
+  async function mintReceipt() {
+    if (existing.alreadyMinted || mint.step === "signing" || mint.step === "confirming") {
+      return;
+    }
+    setState({ kind: "generating-image" });
     try {
       const res = await fetch("/api/chaingpt/nft-receipt", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(props),
       });
-      if (!res.ok) {
+      if (res.ok) {
+        const data = await res.json();
+        setState({ kind: "ok", ...data });
+      } else {
+        // Don't block on-chain mint just because ChainGPT image fails.
         const err = await res.json().catch(() => ({ error: res.statusText }));
-        throw new Error(err.error ?? "Request failed");
+        setState({
+          kind: "error",
+          message: `Image generation failed: ${err.error ?? "request failed"} — proceeding with on-chain mint anyway.`,
+        });
       }
-      const data = await res.json();
-      setState({ kind: "ok", ...data });
     } catch (err) {
       setState({
         kind: "error",
-        message: err instanceof Error ? err.message : String(err),
+        message: `Image generation failed: ${err instanceof Error ? err.message : String(err)} — proceeding with on-chain mint anyway.`,
       });
     }
+
+    await mint.submit({
+      intentId: BigInt(props.intentId),
+      mode: props.mode,
+      settleTxHash: (props.txHash as `0x${string}` | undefined) ?? null,
+      pair: props.pair,
+    });
   }
 
   function download() {
@@ -89,6 +114,13 @@ Built with @Chain_GPT for #iExecVibeCoding`,
     window.open(url, "_blank");
   }
 
+  const onchainTokenId = mint.tokenId ?? existing.tokenId;
+  const isMinting =
+    state.kind === "generating-image" ||
+    mint.step === "signing" ||
+    mint.step === "confirming";
+  const showButton = !existing.alreadyMinted && state.kind !== "ok";
+
   return (
     <div className="border border-zinc-800 bg-zinc-900/30 p-4">
       <div className="flex items-center justify-between">
@@ -100,29 +132,57 @@ Built with @Chain_GPT for #iExecVibeCoding`,
             >
               token
             </span>
-            ChainGPT NFT Receipt
+            On-chain NFT Receipt
           </p>
           <p className="font-mono text-[11px] text-zinc-500">
-            AI-generated · model: velogen · 512×512
+            ChainGPT velogen 512×512 + ERC-721 on Arbitrum Sepolia
           </p>
         </div>
-        {state.kind !== "ok" && (
+
+        {existing.alreadyMinted && onchainTokenId !== null && (
+          <a
+            href={`https://sepolia.arbiscan.io/token/${DIAM_RECEIPT_ADDRESS}?a=${onchainTokenId.toString()}`}
+            target="_blank"
+            rel="noreferrer"
+            className="text-label-caps flex items-center gap-1.5 border border-[--color-primary]/40 bg-[--color-primary]/10 px-3 py-1.5 text-[--color-primary] hover:bg-[--color-primary]/20"
+          >
+            <span className="material-symbols-outlined text-base">
+              check_circle
+            </span>
+            MINTED #{onchainTokenId.toString()}
+          </a>
+        )}
+
+        {showButton && (
           <button
-            onClick={generate}
-            disabled={state.kind === "loading"}
+            onClick={mintReceipt}
+            disabled={isMinting || existing.isLoading}
             className="text-label-caps flex items-center gap-1.5 border border-zinc-800 px-3 py-1.5 transition-all hover:border-[--color-primary] hover:text-[--color-primary] disabled:opacity-50"
           >
             <span
               className={`material-symbols-outlined text-base ${
-                state.kind === "loading" ? "animate-spin" : ""
+                isMinting ? "animate-spin" : ""
               }`}
             >
-              {state.kind === "loading" ? "sync" : "auto_awesome"}
+              {state.kind === "generating-image" && "auto_awesome"}
+              {mint.step === "signing" && "draw"}
+              {mint.step === "confirming" && "sync"}
+              {!isMinting && "auto_awesome"}
             </span>
-            {state.kind === "loading" ? "GENERATING…" : "MINT RECEIPT"}
+            {state.kind === "generating-image" && "GENERATING…"}
+            {mint.step === "signing" && "CONFIRM IN WALLET…"}
+            {mint.step === "confirming" && "MINTING ON-CHAIN…"}
+            {!isMinting && "MINT RECEIPT"}
           </button>
         )}
       </div>
+
+      {existing.alreadyMinted && state.kind !== "ok" && (
+        <p className="mt-3 font-mono text-[11px] text-zinc-500">
+          You already minted Receipt #{onchainTokenId?.toString()} for this
+          trade. View on Arbiscan or in your wallet — duplicates are blocked.
+        </p>
+      )}
 
       {state.kind === "ok" && (
         <div className="mt-4 space-y-3 border-t border-zinc-800 pt-4">
@@ -158,6 +218,12 @@ Built with @Chain_GPT for #iExecVibeCoding`,
             </div>
           </div>
 
+          {/* On-chain mint status */}
+          <OnchainStatus
+            mint={mint}
+            existingTokenId={existing.tokenId}
+          />
+
           {/* Metadata grid */}
           <div className="grid grid-cols-2 gap-3 border border-zinc-800 bg-zinc-950/40 p-3">
             <MetadataRow label="FINGERPRINT" value={state.fingerprint} mono />
@@ -167,7 +233,7 @@ Built with @Chain_GPT for #iExecVibeCoding`,
             />
             {props.txHash && (
               <MetadataRow
-                label="TX_HASH"
+                label="SETTLE_TX"
                 value={`${props.txHash.slice(0, 10)}…${props.txHash.slice(-6)}`}
                 mono
                 copyValue={props.txHash}
@@ -206,13 +272,7 @@ Built with @Chain_GPT for #iExecVibeCoding`,
             <MetadataRow label="NETWORK" value="ARB_SEPOLIA" mono />
           </div>
 
-          {/* On-chain mint */}
-          <OnchainMintPanel
-            mint={mint}
-            onMintOnchain={onMintOnchain}
-          />
-
-          {/* Action buttons */}
+          {/* Download / share — keep image artifacts available even after mint. */}
           <div className="flex gap-2">
             <button
               onClick={download}
@@ -231,15 +291,6 @@ Built with @Chain_GPT for #iExecVibeCoding`,
               <span className="material-symbols-outlined text-base">share</span>
               SHARE
             </button>
-            <button
-              onClick={() => setState({ kind: "idle" })}
-              className="text-label-caps flex items-center gap-1.5 border border-zinc-800 px-3 py-2 transition-all hover:border-zinc-600"
-              title="Generate another"
-            >
-              <span className="material-symbols-outlined text-base">
-                refresh
-              </span>
-            </button>
           </div>
 
           <details className="border border-zinc-800 bg-zinc-950/40 p-3">
@@ -253,9 +304,9 @@ Built with @Chain_GPT for #iExecVibeCoding`,
         </div>
       )}
 
-      {state.kind === "error" && (
-        <p className="mt-3 flex items-center gap-1 font-mono text-[11px] text-[--color-danger]">
-          <span className="material-symbols-outlined text-xs">error</span>
+      {state.kind === "error" && !isMinting && (
+        <p className="mt-3 flex items-center gap-1 font-mono text-[11px] text-amber-400">
+          <span className="material-symbols-outlined text-xs">info</span>
           {state.message}
         </p>
       )}
@@ -263,76 +314,75 @@ Built with @Chain_GPT for #iExecVibeCoding`,
   );
 }
 
-function OnchainMintPanel({
+function OnchainStatus({
   mint,
-  onMintOnchain,
+  existingTokenId,
 }: {
   mint: ReturnType<typeof useReceiptMint>;
-  onMintOnchain: () => Promise<void>;
+  existingTokenId: bigint | null;
 }) {
-  const busy = mint.step === "signing" || mint.step === "confirming";
-  const minted = mint.step === "done" && mint.tokenId !== null;
-
-  return (
-    <div className="border border-[--color-primary]/40 bg-[--color-primary]/5 p-3">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex-1">
-          <p className="text-label-caps flex items-center gap-1.5 text-[--color-primary]">
-            <span
-              className="material-symbols-outlined text-base"
-              style={{ fontVariationSettings: "'FILL' 1" }}
-            >
-              verified
-            </span>
-            On-chain Receipt
-          </p>
-          <p className="mt-1 font-mono text-[10px] leading-relaxed text-zinc-500">
-            Mint an ERC-721 keepsake on Arbitrum Sepolia. Metadata + SVG
-            stored fully on-chain — survives any off-chain image host.
-          </p>
-        </div>
-        <button
-          onClick={onMintOnchain}
-          disabled={busy || minted}
-          className="text-label-caps flex shrink-0 items-center gap-1.5 border border-[--color-primary]/40 bg-[--color-primary]/10 px-3 py-1.5 text-[--color-primary] transition-colors hover:bg-[--color-primary]/20 disabled:opacity-50"
-        >
-          <span
-            className={`material-symbols-outlined text-base ${
-              busy ? "animate-spin" : ""
-            }`}
-          >
-            {mint.step === "signing" && "draw"}
-            {mint.step === "confirming" && "sync"}
-            {mint.step === "done" && "check_circle"}
-            {(mint.step === "idle" || mint.step === "error") && "token"}
-          </span>
-          {mint.step === "signing" && "CONFIRM IN WALLET…"}
-          {mint.step === "confirming" && "MINTING…"}
-          {minted && `MINTED #${mint.tokenId!.toString()}`}
-          {(mint.step === "idle" || mint.step === "error") && "MINT ON-CHAIN"}
-        </button>
-      </div>
-
-      {minted && mint.txHash && (
-        <p className="mt-2 flex items-center gap-2 font-mono text-[10px] text-zinc-400">
-          <span className="text-[--color-primary]">✓</span>
+  const tokenId = mint.tokenId ?? existingTokenId;
+  if (mint.step === "signing") {
+    return (
+      <p className="font-mono text-[10px] text-amber-300">
+        → confirm transaction in wallet to commit on-chain receipt…
+      </p>
+    );
+  }
+  if (mint.step === "confirming") {
+    return (
+      <p className="flex items-center gap-2 font-mono text-[10px] text-amber-300">
+        <span className="material-symbols-outlined animate-spin text-xs">
+          sync
+        </span>
+        Minting on-chain — Arbitrum Sepolia confirming…
+        {mint.txHash && (
           <a
             href={`https://sepolia.arbiscan.io/tx/${mint.txHash}`}
             target="_blank"
             rel="noreferrer"
-            className="break-all text-[--color-primary] underline hover:text-[--color-primary]/80"
+            className="text-[--color-primary] underline"
           >
-            {mint.txHash.slice(0, 10)}…{mint.txHash.slice(-8)}
+            tx →
           </a>
-        </p>
-      )}
-      {mint.step === "error" && mint.error && (
-        <p className="mt-2 font-mono text-[10px] text-[--color-danger]">
-          {mint.error}
-        </p>
-      )}
-    </div>
-  );
+        )}
+      </p>
+    );
+  }
+  if (mint.step === "done" && tokenId !== null) {
+    return (
+      <div className="flex flex-wrap items-center gap-2 font-mono text-[10px] text-[--color-primary]">
+        <span className="material-symbols-outlined text-xs">verified</span>
+        Minted Receipt NFT
+        <a
+          href={`https://sepolia.arbiscan.io/token/${DIAM_RECEIPT_ADDRESS}?a=${tokenId.toString()}`}
+          target="_blank"
+          rel="noreferrer"
+          className="underline hover:text-[--color-primary]/80"
+        >
+          #{tokenId.toString()} on Arbiscan
+        </a>
+        {mint.txHash && (
+          <a
+            href={`https://sepolia.arbiscan.io/tx/${mint.txHash}`}
+            target="_blank"
+            rel="noreferrer"
+            className="underline hover:text-[--color-primary]/80"
+          >
+            tx
+          </a>
+        )}
+      </div>
+    );
+  }
+  if (mint.step === "error") {
+    return (
+      <p className="font-mono text-[10px] text-[--color-danger]">
+        On-chain mint failed: {mint.error}
+      </p>
+    );
+  }
+  return null;
 }
 
 function MetadataRow({

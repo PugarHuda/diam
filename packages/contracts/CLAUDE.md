@@ -4,13 +4,14 @@
 
 - **Language:** Solidity `^0.8.27`
 - **Build:** Foundry (`forge`)
-- **Library:** `@iexec-nox/nox-protocol-contracts` for confidential ops, OpenZeppelin for utils
+- **Library:** `@iexec-nox/nox-protocol-contracts` for confidential ops, OpenZeppelin for ERC-721 + utils (Strings, Base64)
 
 ## Structure
 
 ```
 src/
 ├── PrivateOTC.sol              # Main orchestrator (Direct OTC + RFQ Vickrey)
+├── DiamReceipt.sol             # ERC-721 trade receipt with fully onchain SVG metadata
 ├── interfaces/
 │   ├── IPrivateOTC.sol         # External interface
 │   ├── IERC7984.sol            # Confidential fungible token interface
@@ -19,8 +20,18 @@ src/
     └── DiamCToken.sol          # ERC-7984 confidential token (cUSDC, cETH)
 
 test/                            # Foundry tests (local + fork)
-script/                          # Deploy & operational scripts
+script/
+├── Deploy.s.sol                # Original PrivateOTC + cTokens deploy
+└── DeployReceipt.s.sol         # Standalone DiamReceipt deploy
 ```
+
+### DiamReceipt.sol — onchain ERC-721 keepsake
+
+- Open mint at the contract level: `mint(uint256 intentId, Mode mode, bytes32 settleTxHash, bytes32 pair)`. Anyone can call; caller becomes owner. Frontend gates UX to actual participants.
+- Multiple receipts per intent are allowed (e.g. maker + taker each mint their own copy).
+- `tokenURI(tokenId)` returns `data:application/json;base64,...` containing JSON metadata + inline SVG image — no IPFS or off-chain host needed.
+- SVG construction is split across `_svgHead`/`_svgBody` and `_buildJson` helpers to dodge `Stack too deep`. Each `abi.encodePacked` keeps under ~8 args.
+- Emits `ReceiptMinted(uint256 indexed tokenId, uint256 indexed intentId, address indexed minter, Mode mode)` — the indexed (intentId, minter) pair lets the frontend cheap-check idempotency via `getLogs`.
 
 ## Key patterns
 
@@ -72,11 +83,27 @@ forge install                       # install lib deps (forge-std, OpenZeppelin)
 forge build                          # compile
 forge test -vvv                      # run tests verbose
 forge test --gas-report              # gas profile
-forge script script/Deploy.s.sol \   # deploy
+
+# Deploy PrivateOTC + cTokens
+forge script script/Deploy.s.sol \
   --rpc-url $ARBITRUM_SEPOLIA_RPC_URL \
   --private-key $PRIVATE_KEY \
   --broadcast --verify
+
+# Deploy DiamReceipt standalone (only needed if redeploying receipts)
+forge script script/DeployReceipt.s.sol \
+  --rpc-url $ARBITRUM_SEPOLIA_RPC_URL \
+  --broadcast --slow
 ```
+
+## Deployed addresses (Arbitrum Sepolia)
+
+| Contract | Address |
+|---|---|
+| PrivateOTC | `0xBD27DABa875aF238Fc7f2848B23904c99Ae5A563` |
+| cUSDC | `0xb690aaDa4e23620D0dcDE4c493BC1D90F791aB3F` |
+| cETH | `0xeB3AD65Bb0D877Bd57d7cEE9Bff800771Ba114d1` |
+| DiamReceipt | `0xE011E57ff89a9b1450551A7cE402b75c5Bd27B85` |
 
 ## Gotchas
 
@@ -84,3 +111,5 @@ forge script script/Deploy.s.sol \   # deploy
 - `div` by zero return MAX (no revert) — selalu check denominator
 - Tipe terbatas: `euint16`/`euint256` saja (no `euint64`)
 - `externalEuint256` + bytes proof harus pas — kalau proof invalid, revert
+- `_settleAtomic` requires BOTH parties to have `setOperator(this, until)` on their respective sides — see "Operator authorization invariant" in root CLAUDE.md
+- Onchain SVG via `abi.encodePacked`: each arg = 1 stack slot. Beyond ~12 args you'll hit "Stack too deep". Split builders into helpers returning `bytes` and concat — see `_svgHead`/`_svgBody` in DiamReceipt.sol
